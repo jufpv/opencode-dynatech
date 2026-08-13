@@ -86,8 +86,8 @@ export default Plugin.define({
 
     const uiUrl = ui?.url ?? `http://127.0.0.1:${options.uiPort || 9877}`
     const baseUrl = uiUrl.replace(/\/$/, "")
+    const homeUrl = `${baseUrl}/`
     const cronUrl = `${baseUrl}/cron`
-    const chatUrl = `${baseUrl}/chat`
 
     await ctx.command.transform((commands) => {
       commands.update("cron", (command) => {
@@ -95,8 +95,8 @@ export default Plugin.define({
         command.template = openUiTemplate(cronUrl, "La page des tâches planifiées")
       })
       commands.update("webui", (command) => {
-        command.description = "Ouvrir l'interface Dynatech WebUI"
-        command.template = openUiTemplate(chatUrl, "L'interface WebUI")
+        command.description = "Ouvrir l'accueil Dynatech WebUI"
+        command.template = openUiTemplate(homeUrl, "L'accueil WebUI")
       })
     })
 

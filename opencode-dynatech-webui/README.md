@@ -21,8 +21,8 @@ Dépend de [`opencode-dynatech-cron`](../opencode-dynatech-cron) pour l’API JS
 
 - Navigateur (Mac) : [http://127.0.0.1:9877/](http://127.0.0.1:9877/)
 - Réseau local (téléphone) : `http://<ip-du-mac>:9877/`
-- Pages : `/chat`, `/documents`, `/cron`, `/skills`, `/tools`, `/mcps`
-- Slash chat : `/webui` (ouvre `/chat`), `/cron` (ouvre `/cron`)
+- Pages : `/` (accueil), `/chat`, `/documents`, `/cron`, `/skills`, `/tools`, `/mcps`
+- Slash chat : `/webui` (ouvre `/`), `/cron` (ouvre `/cron`)
 
 ### Gestion config (direct OpenCode)
 

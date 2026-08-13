@@ -1,7 +1,7 @@
 import { getProjectsPayload } from "../services/projects.ts"
 
 export type NavId = "skills" | "tools" | "mcps"
-export type RailId = "chat" | "documents" | "cron" | "settings"
+export type RailId = "chat" | "documents" | "cron"
 
 const ITEMS: Array<{ id: NavId; href: string; label: string }> = [
   { id: "skills", href: "/skills", label: "Skills" },
@@ -15,8 +15,6 @@ const ICON_DOCUMENTS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 
 /** Alfred sidebar icon for « Tâches planifiées ». */
 const ICON_CRON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`
-
-const ICON_SETTINGS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`
 
 function escapeHtml(text: string): string {
   return text
@@ -37,7 +35,7 @@ export function renderNav(active: NavId | null): string {
 }
 
 function renderLogo(): string {
-  return `<a class="app-logo" href="/chat" title="DynaTech" aria-label="DynaTech">
+  return `<a class="app-logo" href="/" title="Accueil" aria-label="Accueil DynaTech">
   <img src="/logo.png" alt="DynaTech" width="40" height="40" decoding="async">
 </a>`
 }
@@ -53,10 +51,6 @@ export function renderRail(active: RailId | null): string {
     </a>
     <a class="app-rail-btn${active === "cron" ? " active" : ""}" href="/cron" title="Tâches planifiées" aria-label="Tâches planifiées" data-rail="cron">
       ${ICON_CRON}
-    </a>
-    <span class="app-rail-sep" role="separator" aria-hidden="true"></span>
-    <a class="app-rail-btn${active === "settings" ? " active" : ""}" href="/skills" title="Réglages" aria-label="Réglages" data-rail="settings">
-      ${ICON_SETTINGS}
     </a>
   </nav>
 </aside>`
@@ -183,6 +177,11 @@ const PROJECT_BAR_JS = `
         el.classList.toggle("selected", on);
         el.setAttribute("aria-selected", on ? "true" : "false");
       });
+      document.dispatchEvent(
+        new CustomEvent("dynatech:project-changed", {
+          detail: data.current || { id, name },
+        }),
+      );
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : "Impossible de changer de projet");
@@ -212,8 +211,7 @@ export function renderShell(
   const tabClass = active ? ` tab-${active}` : ""
   const stackExtra = options.stackClass ? ` ${options.stackClass}` : ""
   const shellExtra = options.shellClass ? ` ${options.shellClass}` : ""
-  // Skills / Tools / MCP live under Réglages.
-  const railActive: RailId | null = rail ?? (active ? "settings" : null)
+  const railActive: RailId | null = rail
   const tabs = options.tabsHtml ?? renderNav(active)
   return `<div class="shell${shellExtra}">
   <div class="shell-cluster">
@@ -448,13 +446,6 @@ export const NAV_CSS = `
   flex-direction: row;
   align-items: center;
   gap: 0.4rem;
-}
-.app-rail-sep {
-  width: 1px;
-  height: 1.15rem;
-  margin: 0 0.15rem;
-  background: var(--border);
-  flex-shrink: 0;
 }
 .app-rail-btn {
   box-sizing: border-box;

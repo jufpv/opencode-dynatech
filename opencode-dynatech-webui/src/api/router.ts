@@ -1,8 +1,14 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import * as mcps from "../services/mcps.ts"
 import * as projects from "../services/projects.ts"
+import * as sessions from "../services/sessions.ts"
 import * as skills from "../services/skills.ts"
+import * as status from "../services/status.ts"
 import * as tools from "../services/tools.ts"
+
+export interface ConfigApiOptions {
+  cronApiUrl: string
+}
 
 async function readJson(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = []
@@ -25,11 +31,28 @@ export async function handleConfigApi(
   req: IncomingMessage,
   res: ServerResponse,
   url: URL,
+  options: ConfigApiOptions,
 ): Promise<boolean> {
   const { pathname } = url
   const method = (req.method || "GET").toUpperCase()
 
   try {
+    if (pathname === "/api/status" && method === "GET") {
+      sendJson(res, 200, await status.getStatus(options.cronApiUrl))
+      return true
+    }
+
+    if (pathname === "/api/sessions/recent" && method === "GET") {
+      const limitRaw = url.searchParams.get("limit")
+      const limit = limitRaw ? Number(limitRaw) : 8
+      sendJson(res, 200, {
+        sessions: await sessions.listRecentSessions(
+          Number.isFinite(limit) ? limit : 8,
+        ),
+      })
+      return true
+    }
+
     // Projects
     if (pathname === "/api/projects" && method === "GET") {
       sendJson(res, 200, projects.getProjectsPayload())

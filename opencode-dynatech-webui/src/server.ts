@@ -124,7 +124,7 @@ export async function startWebuiServer(options: {
       const url = new URL(req.url || "/", `http://127.0.0.1:${port}`)
       const method = (req.method || "GET").toUpperCase()
 
-      if (await handleConfigApi(req, res, url)) return
+      if (await handleConfigApi(req, res, url, { cronApiUrl })) return
 
       const cronPath = mapCronProxyPath(url.pathname)
       if (cronPath) {

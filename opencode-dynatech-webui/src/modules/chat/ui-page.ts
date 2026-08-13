@@ -441,7 +441,7 @@ const CHAT_CSS = `
   -webkit-overflow-scrolling: touch;
 }
 .msg {
-  max-width: 100%;
+  max-width: min(38rem, 92%);
   font-size: 0.9rem;
   line-height: 1.55;
   color: var(--text);
@@ -450,10 +450,11 @@ const CHAT_CSS = `
   margin-top: 0.55rem;
 }
 .msg-assistant {
+  align-self: flex-start;
   padding: 0 0.15rem;
 }
 .msg-user {
-  align-self: stretch;
+  align-self: flex-end;
   padding: 0.7rem 0.85rem;
   border-radius: 10px;
   background: var(--bg-muted);
@@ -471,12 +472,13 @@ const CHAT_CSS = `
   flex: 0 0 auto;
   position: relative;
   z-index: 2;
-  margin: 0 0.75rem 0.75rem;
-  padding: 0.65rem 0.7rem 0.55rem;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  margin: 0;
+  padding: 0.65rem 0.85rem 0.7rem;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
   background: var(--bg-elevated);
-  box-shadow: 0 1px 2px rgba(0,0,0,.03);
+  box-shadow: none;
 }
 .chat-composer-input {
   display: block;
