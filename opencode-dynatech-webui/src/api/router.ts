@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
+import * as localFiles from "../services/local-files.ts"
 import * as mcps from "../services/mcps.ts"
 import * as projects from "../services/projects.ts"
 import * as sessions from "../services/sessions.ts"
@@ -42,6 +43,18 @@ export async function handleConfigApi(
       return true
     }
 
+    if (pathname === "/api/local-file" && method === "GET") {
+      const raw = url.searchParams.get("url") || url.searchParams.get("path") || ""
+      const image = localFiles.readLocalImage(raw)
+      res.writeHead(200, {
+        "content-type": image.contentType,
+        "cache-control": "private, max-age=3600",
+        "content-length": String(image.body.length),
+      })
+      res.end(image.body)
+      return true
+    }
+
     if (pathname === "/api/sessions/recent" && method === "GET") {
       const limitRaw = url.searchParams.get("limit")
       const limit = limitRaw ? Number(limitRaw) : 8
@@ -51,6 +64,61 @@ export async function handleConfigApi(
         ),
       })
       return true
+    }
+
+    if (pathname === "/api/sessions" && method === "GET") {
+      const limitRaw = url.searchParams.get("limit")
+      const limit = limitRaw ? Number(limitRaw) : 30
+      sendJson(res, 200, {
+        sessions: await sessions.listProjectSessions(
+          Number.isFinite(limit) ? limit : 30,
+        ),
+      })
+      return true
+    }
+
+    if (pathname === "/api/sessions" && method === "POST") {
+      const body = (await readJson(req)) as { title?: string }
+      const session = await sessions.createProjectSession(
+        typeof body.title === "string" ? body.title : undefined,
+      )
+      sendJson(res, 201, { ok: true, session })
+      return true
+    }
+
+    {
+      const contextMatch = pathname.match(
+        /^\/api\/sessions\/([^/]+)\/context-usage$/,
+      )
+      if (contextMatch && method === "GET") {
+        const id = decodeURIComponent(contextMatch[1]!)
+        sendJson(res, 200, {
+          usage: await sessions.getSessionContextUsage(id),
+        })
+        return true
+      }
+      const messagesMatch = pathname.match(/^\/api\/sessions\/([^/]+)\/messages$/)
+      if (messagesMatch && method === "GET") {
+        const id = decodeURIComponent(messagesMatch[1]!)
+        sendJson(res, 200, {
+          session: await sessions.getSession(id),
+          messages: await sessions.listSessionMessages(id),
+        })
+        return true
+      }
+      const sessionMatch = pathname.match(/^\/api\/sessions\/([^/]+)$/)
+      if (sessionMatch) {
+        const id = decodeURIComponent(sessionMatch[1]!)
+        if (method === "GET") {
+          sendJson(res, 200, { session: await sessions.getSession(id) })
+          return true
+        }
+        if (method === "DELETE") {
+          await sessions.deleteSession(id)
+          sendJson(res, 200, { ok: true })
+          return true
+        }
+      }
     }
 
     // Projects

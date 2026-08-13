@@ -4,6 +4,9 @@ import { NAV_CSS, renderShell } from "../../shell/nav.ts"
 
 const ICON_CHAT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`
 
+/** OpenCode-style « Nouvelle session » (square-pen). */
+const ICON_NEW_SESSION = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>`
+
 const ICON_CRON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`
 
 const ICON_AGENT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>`
@@ -32,6 +35,10 @@ export function renderHomePage(theme: UiTheme): string {
     `
     <section class="panel home-panel" aria-label="Accueil">
       <div class="home-section home-recent" aria-label="Dernières discussions">
+        <button type="button" class="recent-new" id="recent-new">
+          <span class="recent-new-icon" aria-hidden="true">${ICON_NEW_SESSION}</span>
+          <span>Nouvelle session</span>
+        </button>
         <div class="recent-list" id="recent-list" aria-live="polite"></div>
         <p class="recent-empty hidden" id="recent-empty">Aucune discussion récente.</p>
       </div>
@@ -82,6 +89,7 @@ const HOME_JS = `
   const modelNameEl = document.getElementById("model-name");
   const recentList = document.getElementById("recent-list");
   const recentEmpty = document.getElementById("recent-empty");
+  const recentNew = document.getElementById("recent-new");
 
   function escapeHtml(text) {
     return String(text || "")
@@ -110,17 +118,19 @@ const HOME_JS = `
       if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
       const sessions = Array.isArray(data.sessions) ? data.sessions : [];
       recentList.innerHTML = sessions.map((s) => {
-        const href = s.href || ("/chat?session=" + encodeURIComponent(s.id || ""));
+        const id = s.id || "";
+        const href = s.href || ("/chat?session=" + encodeURIComponent(id));
         return (
-          '<a class="recent-item" href="' + escapeHtml(href) + '">' +
-            '<span class="recent-session-row">' +
+          '<div class="recent-item" data-id="' + escapeHtml(id) + '">' +
+            '<a class="recent-link" href="' + escapeHtml(href) + '">' +
               '<span class="recent-icon" aria-hidden="true">' + ICON_CHAT + "</span>" +
               '<span class="recent-session">' + escapeHtml(s.title || "Session") + "</span>" +
               '<span class="recent-chevron" aria-hidden="true">' +
                 '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>' +
               "</span>" +
-            "</span>" +
-          "</a>"
+            "</a>" +
+            '<button type="button" class="recent-close" data-close="' + escapeHtml(id) + '" aria-label="Supprimer la discussion" title="Supprimer">×</button>' +
+          "</div>"
         );
       }).join("");
       recentEmpty.classList.toggle("hidden", sessions.length > 0);
@@ -150,6 +160,48 @@ const HOME_JS = `
     }
   }
 
+  if (recentNew) {
+    recentNew.addEventListener("click", async () => {
+      recentNew.disabled = true;
+      try {
+        const res = await fetch("/api/sessions", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+        const id = data.session && data.session.id;
+        if (!id) throw new Error("Session invalide");
+        location.href = "/chat?session=" + encodeURIComponent(id);
+      } catch (err) {
+        recentNew.disabled = false;
+        alert(err instanceof Error ? err.message : "Impossible de créer la discussion");
+      }
+    });
+  }
+
+  if (recentList) {
+    recentList.addEventListener("click", async (ev) => {
+      const close = ev.target.closest(".recent-close");
+      if (!close) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const id = close.getAttribute("data-close") || "";
+      if (!id) return;
+      close.disabled = true;
+      try {
+        const res = await fetch("/api/sessions/" + encodeURIComponent(id), { method: "DELETE" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+        await loadRecent();
+      } catch (err) {
+        close.disabled = false;
+        alert(err instanceof Error ? err.message : "Impossible de supprimer la discussion");
+      }
+    });
+  }
+
   loadRecent();
   document.addEventListener("dynatech:project-changed", () => {
     loadRecent();
@@ -177,6 +229,54 @@ const HOME_CSS = `
 }
 .home-recent {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.recent-new {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: calc(100% + 0.6rem);
+  margin: 0 -0.3rem 0.1rem;
+  padding: 0.4rem 0.45rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  text-align: left;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.recent-new:hover {
+  color: var(--text);
+  background: var(--bg-muted);
+}
+.recent-new:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.recent-new-icon {
+  flex: 0 0 auto;
+  width: 0.95rem;
+  height: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 0;
+  color: inherit;
+  opacity: 0.95;
+}
+.recent-new-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 .recent-list {
   display: flex;
@@ -184,26 +284,30 @@ const HOME_CSS = `
   gap: 0.3rem;
 }
 .recent-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
   max-width: 100%;
   min-width: 0;
-  padding: 0.4rem 0.45rem;
+  padding: 0.15rem 0.2rem 0.15rem 0.35rem;
   margin: 0 -0.3rem;
   border-radius: 6px;
   background: transparent;
-  color: inherit;
-  text-decoration: none;
   transition: background .15s;
 }
 .recent-item:hover {
   background: var(--bg-muted);
 }
-.recent-session-row {
+.recent-link {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  max-width: 100%;
+  flex: 1 1 auto;
   min-width: 0;
+  max-width: 100%;
+  padding: 0.25rem 0.15rem;
+  color: inherit;
+  text-decoration: none;
 }
 .recent-icon {
   flex: 0 0 auto;
@@ -239,6 +343,30 @@ const HOME_CSS = `
   width: 100%;
   height: 100%;
   display: block;
+}
+.recent-close {
+  flex: 0 0 auto;
+  width: 1.45rem;
+  height: 1.45rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-faint);
+  font: inherit;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity .15s, color .15s, background .15s;
+}
+.recent-item:hover .recent-close {
+  opacity: 1;
+}
+.recent-close:hover {
+  color: var(--err);
+  background: var(--err-bg);
 }
 .recent-empty {
   margin: 0;
