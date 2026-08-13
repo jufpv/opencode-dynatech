@@ -1,7 +1,15 @@
 import { Plugin } from "@opencode-ai/plugin"
+import { pathToFileURL } from "node:url"
 import type { Server } from "node:http"
+import { createChatModule } from "./modules/chat/index.ts"
 import { createCronModule } from "./modules/cron/index.ts"
+import { createDocumentsModule } from "./modules/documents/index.ts"
+import { createHomeModule } from "./modules/home/index.ts"
+import { createMcpsModule } from "./modules/mcps/index.ts"
+import { createSkillsModule } from "./modules/skills/index.ts"
+import { createToolsModule } from "./modules/tools/index.ts"
 import { startWebuiServer } from "./server.ts"
+import { listEnabledCustomToolFiles } from "./services/tools.ts"
 import { parseOptions } from "./types.ts"
 
 const WEBUI_OPEN_MARKER = "OPENCODE_WEBUI_OPENED"
@@ -15,33 +23,80 @@ function openUiTemplate(url: string, label: string): string {
   ].join("\n")
 }
 
+async function loadCustomToolDefs(): Promise<Array<Record<string, unknown>>> {
+  const defs: Array<Record<string, unknown>> = []
+  for (const file of listEnabledCustomToolFiles()) {
+    try {
+      const mod = await import(pathToFileURL(file).href)
+      const def = mod.default
+      if (!def || typeof def !== "object") {
+        console.warn(`[opencode-webui] outil ignoré (export default manquant): ${file}`)
+        continue
+      }
+      const name = String(def.name || file.split("/").pop()?.replace(/\.ts$/, ""))
+      defs.push({
+        ...def,
+        name,
+        options: { codemode: false, ...(def.options || {}) },
+      })
+      console.log(`[opencode-webui] outil custom: ${name}`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.warn(`[opencode-webui] échec chargement outil ${file}: ${message}`)
+    }
+  }
+  return defs
+}
+
 export default Plugin.define({
   id: "dynatech.opencode-webui",
   setup: async (ctx) => {
     const options = parseOptions(ctx.options)
     let ui: { server: Server; url: string } | undefined
 
+    const customTools = await loadCustomToolDefs()
+    await ctx.tool.transform((tools) => {
+      for (const def of customTools) tools.add(def)
+    })
+
     if (options.uiPort > 0) {
       try {
         ui = await startWebuiServer({
           port: options.uiPort,
           cronApiUrl: options.cronApiUrl,
-          modules: [createCronModule(options.cronApiUrl)],
+          modules: [
+            createHomeModule(),
+            createChatModule(),
+            createDocumentsModule(),
+            createCronModule(options.cronApiUrl),
+            createSkillsModule(),
+            createToolsModule(),
+            createMcpsModule(),
+          ],
         })
         console.log(`[opencode-webui] UI: ${ui.url}`)
+        for (const lan of ui.lanUrls) {
+          console.log(`[opencode-webui] LAN: ${lan}`)
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         console.warn(`[opencode-webui] Instance secondaire (UI ${options.uiPort}): ${message}`)
       }
     }
 
-    const uiUrl = ui?.url ?? `http://127.0.0.1:${options.uiPort || 8787}`
-    const cronUrl = `${uiUrl.replace(/\/$/, "")}/cron`
+    const uiUrl = ui?.url ?? `http://127.0.0.1:${options.uiPort || 9877}`
+    const baseUrl = uiUrl.replace(/\/$/, "")
+    const cronUrl = `${baseUrl}/cron`
+    const chatUrl = `${baseUrl}/chat`
 
     await ctx.command.transform((commands) => {
       commands.update("cron", (command) => {
         command.description = "Ouvrir l'UI des tâches planifiées"
         command.template = openUiTemplate(cronUrl, "La page des tâches planifiées")
+      })
+      commands.update("webui", (command) => {
+        command.description = "Ouvrir l'interface Dynatech WebUI"
+        command.template = openUiTemplate(chatUrl, "L'interface WebUI")
       })
     })
 

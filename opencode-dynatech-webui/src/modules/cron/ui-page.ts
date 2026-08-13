@@ -1,5 +1,6 @@
 import type { UiTheme } from "./theme.ts"
 import { themeColorScheme } from "./theme.ts"
+import { NAV_CSS, renderShell } from "../../shell/nav.ts"
 
 export function renderUiPage(timezone: string, theme: UiTheme): string {
   const tz = escapeHtml(timezone)
@@ -13,10 +14,12 @@ export function renderUiPage(timezone: string, theme: UiTheme): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="color-scheme" content="${colorScheme}">
   <title>Tâches planifiées · OpenCode</title>
-  <style>${CSS}${fontOverrides}</style>
+  <style>${CSS}${NAV_CSS}${fontOverrides}</style>
 </head>
 <body>
-  <main class="app">
+  ${renderShell(
+    null,
+    `
     <div class="view view-tasks" id="view-tasks">
       <section class="tasks-panel" aria-labelledby="tasks-title">
         <div class="entity-list-header">
@@ -87,7 +90,9 @@ export function renderUiPage(timezone: string, theme: UiTheme): string {
         </form>
       </section>
     </div>
-  </main>
+  `,
+    "cron",
+  )}
   <script>${CLIENT_JS}</script>
 </body>
 </html>`
@@ -208,15 +213,13 @@ body {
 }
 
 .app {
-  width: min(720px, 100%);
-  margin: 0 auto;
-  min-height: 100dvh;
+  width: 100%;
 }
 
 .view.hidden { display: none; }
 
 .tasks-panel {
-  padding: 1.25rem 1.5rem 2rem;
+  padding: 0; /* padding unifié via .shell-box .tasks-panel */
 }
 
 .entity-list-header {
@@ -309,15 +312,14 @@ body {
 }
 
 .tasks-empty {
-  padding: 2.25rem 1.25rem;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  padding: 1.5rem 1rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
   background: var(--bg-elevated);
   color: var(--text-muted);
   font-size: 0.9rem;
   text-align: center;
   line-height: 1.55;
-  box-shadow: var(--shadow);
 }
 
 .tasks-empty.hidden,
@@ -326,8 +328,8 @@ body {
 
 .tasks-error {
   margin-bottom: 1rem;
-  padding: 0.75rem 1rem;
-  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  border-radius: 6px;
   border: 1px solid var(--err-border);
   background: var(--err-bg);
   color: var(--err);
@@ -350,12 +352,11 @@ body {
 .entity-form {
   display: flex;
   flex-direction: column;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--bg-elevated);
   overflow: hidden;
-  box-shadow: var(--shadow);
 }
 
 .entity-form > label:not(.entity-form-toggle) {
@@ -651,20 +652,20 @@ body {
   text-align: center;
 }
 
-.task-list { display: grid; gap: 0.65rem; }
+.task-list { display: grid; gap: 0.5rem; }
 
 .task-card {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg-elevated);
-  padding: 0.8rem 0.9rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--bg-muted);
+  padding: 0.7rem 0.8rem;
   display: grid;
   gap: 0.35rem;
-  box-shadow: var(--shadow);
 }
 
 .task-card.disabled {
-  background: var(--disabled-bg);
+  background: var(--bg-elevated);
+  border: 1px dashed var(--border-strong);
   color: var(--text-muted);
 }
 
@@ -780,9 +781,6 @@ body {
 .task-status.never { background: var(--bg-muted); color: var(--text-muted); }
 
 @media (max-width: 768px) {
-  .tasks-panel {
-    padding: calc(1rem + env(safe-area-inset-top, 0px)) 1rem 1.5rem;
-  }
   .cron-fields-grid { gap: 0.25rem; }
   .cron-field-cell { padding: 0.45rem 0.2rem; }
 }
@@ -1166,7 +1164,11 @@ function renderScheduledTasks() {
   tasksListEl.innerHTML = "";
   tasksEmptyEl.classList.toggle("hidden", scheduledTasks.length > 0);
 
-  for (const task of scheduledTasks) {
+  const ordered = [...scheduledTasks].sort(
+    (a, b) => Number(!!b.enabled) - Number(!!a.enabled),
+  );
+
+  for (const task of ordered) {
     const card = document.createElement("article");
     card.className = "task-card" + (task.enabled ? "" : " disabled");
     const status = task.lastRunStatus;

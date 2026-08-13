@@ -9,7 +9,6 @@ export function createCronModule(
   return {
     id: "cron",
     mountPath: "/cron",
-    aliases: ["/"],
     renderPage: async () => {
       let timezone = timezoneFallback
       try {

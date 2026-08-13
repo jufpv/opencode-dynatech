@@ -1,5 +1,34 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http"
+import { readFileSync, existsSync } from "node:fs"
+import { networkInterfaces } from "node:os"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
+import { handleConfigApi } from "./api/router.ts"
 import type { WebuiModule } from "./module.ts"
+
+/** Bind all interfaces so LAN devices (e.g. iPhone) can reach the UI. */
+const LISTEN_HOST = "0.0.0.0"
+
+function lanUrls(port: number): string[] {
+  const urls: string[] = []
+  for (const entries of Object.values(networkInterfaces())) {
+    for (const entry of entries || []) {
+      const family = entry.family
+      const isV4 = family === "IPv4" || family === 4
+      if (!isV4 || entry.internal) continue
+      urls.push(`http://${entry.address}:${port}`)
+    }
+  }
+  return urls
+}
+
+const SHELL_DIR = join(dirname(fileURLToPath(import.meta.url)), "shell")
+
+const STATIC_ASSETS: Record<string, { file: string; type: string }> = {
+  "/code-editor.js": { file: "code-editor.js", type: "text/javascript; charset=utf-8" },
+  "/code-editor.css": { file: "code-editor.css", type: "text/css; charset=utf-8" },
+  "/logo.png": { file: "logo.png", type: "image/png" },
+}
 
 function sendJson(res: ServerResponse, status: number, body: unknown) {
   const payload = JSON.stringify(body)
@@ -26,13 +55,6 @@ async function readBody(req: IncomingMessage): Promise<Buffer> {
   return Buffer.concat(chunks)
 }
 
-/**
- * Proxy mapping:
- *   /api/cron           -> ${cronApiUrl}/api/tasks
- *   /api/cron/preview   -> ${cronApiUrl}/api/tasks/preview
- *   /api/cron/:id       -> ${cronApiUrl}/api/tasks/:id
- *   /api/cron/:id/run   -> ${cronApiUrl}/api/tasks/:id/run
- */
 function mapCronProxyPath(pathname: string): string | null {
   if (pathname === "/api/cron") return "/api/tasks"
   if (!pathname.startsWith("/api/cron/")) return null
@@ -94,13 +116,15 @@ export async function startWebuiServer(options: {
   port: number
   cronApiUrl: string
   modules: readonly WebuiModule[]
-}): Promise<{ server: Server; url: string }> {
+}): Promise<{ server: Server; url: string; lanUrls: string[] }> {
   const { port, cronApiUrl, modules } = options
 
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", `http://127.0.0.1:${port}`)
       const method = (req.method || "GET").toUpperCase()
+
+      if (await handleConfigApi(req, res, url)) return
 
       const cronPath = mapCronProxyPath(url.pathname)
       if (cronPath) {
@@ -109,6 +133,21 @@ export async function startWebuiServer(options: {
       }
 
       if (method === "GET") {
+        const asset = STATIC_ASSETS[url.pathname]
+        if (asset) {
+          const path = join(SHELL_DIR, asset.file)
+          if (!existsSync(path)) {
+            sendJson(res, 404, { error: "Not found" })
+            return
+          }
+          res.writeHead(200, {
+            "content-type": asset.type,
+            "cache-control": "no-store",
+          })
+          res.end(readFileSync(path))
+          return
+        }
+
         const mod = findModule(modules, url.pathname)
         if (mod) {
           sendHtml(res, await mod.renderPage())
@@ -125,11 +164,12 @@ export async function startWebuiServer(options: {
 
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject)
-    server.listen(port, "127.0.0.1", () => resolve())
+    server.listen(port, LISTEN_HOST, () => resolve())
   })
 
   return {
     server,
     url: `http://127.0.0.1:${port}`,
+    lanUrls: lanUrls(port),
   }
 }

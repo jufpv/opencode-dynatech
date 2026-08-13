@@ -1,5 +1,7 @@
 # opencode-dynatech
 
+![Aperçu OpenCode Dynatech](./docs/opencode-dynatech.png)
+
 Monorepo des plugins OpenCode Dynatech.
 
 ## Packages

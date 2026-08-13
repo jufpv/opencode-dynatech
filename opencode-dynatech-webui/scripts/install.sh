@@ -50,7 +50,7 @@ if not isinstance(plugins, list):
     plugins = []
 
 options = {
-    "uiPort": 8787,
+    "uiPort": 9877,
     "cronApiUrl": "http://127.0.0.1:8788",
 }
 
@@ -65,6 +65,10 @@ for item in plugins:
     if isinstance(item, dict) and is_webui_plugin(item) and isinstance(item.get("options"), dict):
         options = {**options, **item["options"]}
         break
+
+# Migrate away from Hermes Agent's default port.
+if options.get("uiPort") == 8787:
+    options["uiPort"] = 9877
 
 # Preserve non-webui plugins (including cron).
 data["plugins"] = [item for item in plugins if not is_webui_plugin(item)] + [
@@ -91,9 +95,15 @@ lines = [
     "  // Dynatech plugins (runtime install paths)",
     '  "plugins": '
     + json.dumps(data["plugins"], indent=2, ensure_ascii=False).replace("\n", "\n  "),
-    "}",
-    "",
 ]
+# Preserve other top-level keys (e.g. permissions) without rewriting the whole file by hand.
+for key, value in data.items():
+    if key in {"$schema", "model", "providers", "plugins"}:
+        continue
+    lines[-1] = lines[-1] + ","
+    lines.append("")
+    lines.append(f'  {json.dumps(key)}: {json.dumps(value, indent=2, ensure_ascii=False).replace(chr(10), chr(10) + "  ")}')
+lines.extend(["}", ""])
 config_path.write_text("\n".join(lines))
 print(f"Updated {config_path}")
 print(f"Plugin entry: {entry}")
@@ -102,5 +112,5 @@ PY
 echo
 echo "Install complete."
 echo "Requires opencode-dynatech-cron API on cronApiUrl (default :8788)."
-echo "UI: http://127.0.0.1:8787/"
+echo "UI: http://127.0.0.1:9877/ (LAN: http://<ip-mac>:9877/)"
 echo "Restart OpenCode Beta (or: opencode-cli service restart)"

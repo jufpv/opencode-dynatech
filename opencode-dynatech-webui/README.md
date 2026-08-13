@@ -19,10 +19,22 @@ Dépend de [`opencode-dynatech-cron`](../opencode-dynatech-cron) pour l’API JS
 
 ## Utilisation
 
-- Navigateur : [http://127.0.0.1:8787/](http://127.0.0.1:8787/) ou `/cron`
-- Slash chat : `/cron`
+- Navigateur (Mac) : [http://127.0.0.1:9877/](http://127.0.0.1:9877/)
+- Réseau local (téléphone) : `http://<ip-du-mac>:9877/`
+- Pages : `/chat`, `/documents`, `/cron`, `/skills`, `/tools`, `/mcps`
+- Slash chat : `/webui` (ouvre `/chat`), `/cron` (ouvre `/cron`)
 
-### Proxy API
+### Gestion config (direct OpenCode)
+
+Pas de relais / WebSocket. La webui lit/écrit directement :
+
+| Page | Stockage |
+|---|---|
+| Skills | `~/.config/opencode/skills/<id>/SKILL.md` + `permissions` (action `skill`) |
+| Tools | builtins via `permissions` ; custom `~/.config/opencode/tools/*.ts` (enregistrés par ce plugin) |
+| MCP | `opencode.jsonc` → `mcp.servers` (`disabled` V2) |
+
+### Proxy cron
 
 | UI (webui) | Cron API |
 |---|---|
@@ -31,17 +43,13 @@ Dépend de [`opencode-dynatech-cron`](../opencode-dynatech-cron) pour l’API JS
 | `PUT/DELETE /api/cron/:id` | `/api/tasks/:id` |
 | `POST /api/cron/:id/run` | `/api/tasks/:id/run` |
 
-## Modules
-
-v1 : module `cron` monté sur `/` et `/cron`. D’autres modules pourront s’enregistrer sur la coquille plus tard.
-
 ## Configuration
 
 ```jsonc
 {
   "package": ".../opencode-dynatech-webui/src/index.ts",
   "options": {
-    "uiPort": 8787,
+    "uiPort": 9877,
     "cronApiUrl": "http://127.0.0.1:8788"
   }
 }
@@ -49,7 +57,7 @@ v1 : module `cron` monté sur `/` et `/cron`. D’autres modules pourront s’en
 
 | Option | Défaut | Description |
 |---|---|---|
-| `uiPort` | `8787` | Port UI (`0` pour désactiver) |
+| `uiPort` | `9877` | Port UI (`0` pour désactiver). Écoute sur `0.0.0.0` (LAN). |
 | `cronApiUrl` | `http://127.0.0.1:8788` | Base de l’API cron |
 
 ## Développement
