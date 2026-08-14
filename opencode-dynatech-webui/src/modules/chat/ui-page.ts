@@ -749,7 +749,8 @@ const CHAT_CSS = `
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 0.9rem;
+  /* iOS Safari zooms focused inputs under 16px — keep at least 16px. */
+  font-size: max(16px, 0.9rem);
   line-height: 1.45;
 }
 .chat-composer-input::placeholder {
