@@ -11,6 +11,7 @@ const IMAGE_TYPES: Record<string, string> = {
   ".webp": "image/webp",
   ".bmp": "image/bmp",
   ".avif": "image/avif",
+  ".svg": "image/svg+xml",
 }
 
 const MAX_BYTES = 20 * 1024 * 1024

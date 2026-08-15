@@ -1,7 +1,7 @@
 import { LITE_MARKDOWN_BROWSER_JS } from "../../lib/lite-markdown.ts"
 import type { UiTheme } from "../../shell/theme.ts"
 import { themeColorScheme } from "../../shell/theme.ts"
-import { NAV_CSS, renderShell } from "../../shell/nav.ts"
+import { ICON_PLUS, NAV_CSS, renderShell } from "../../shell/nav.ts"
 
 const ICON_ATTACH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.88 18.09a2 2 0 0 1-2.83-2.83l8.49-8.49"/></svg>`
 
@@ -24,7 +24,7 @@ function sessionPickerHtml(): string {
     ${ICON_CHEVRON}
   </button>
   <div class="session-menu" id="session-menu" role="listbox" hidden>
-    <button type="button" class="session-action" id="session-add"><span class="session-action-icon" aria-hidden="true">+</span><span>Nouvelle session</span></button>
+    <button type="button" class="session-action" id="session-add"><span class="session-action-icon" aria-hidden="true">${ICON_PLUS}</span><span>Nouvelle session</span></button>
     <div class="session-sep" role="separator"></div>
     <div class="session-list" id="session-list"></div>
     <p class="session-empty hidden" id="session-empty">Aucune discussion pour ce projet.</p>
@@ -68,7 +68,7 @@ export function renderChatPage(theme: UiTheme): string {
             <div>
               <h2 id="chat-list-title">Discussions</h2>
             </div>
-            <button type="button" class="entity-add-btn" id="chat-list-new">Nouvelle</button>
+            <button type="button" class="entity-add-btn" id="chat-list-new" title="Nouvelle discussion" aria-label="Nouvelle discussion">${ICON_PLUS}</button>
           </div>
           <div class="page-sep" role="separator" aria-hidden="true"></div>
         </header>
@@ -1477,10 +1477,13 @@ const CHAT_CSS = `
   align-items: center;
   justify-content: center;
   width: 1.1rem;
+  height: 1.1rem;
   flex-shrink: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-  line-height: 1;
+}
+.session-action-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 .session-sep {
   height: 1px;
@@ -1838,6 +1841,11 @@ const CHAT_CSS = `
 }
 .msg-md p {
   margin: 0.45rem 0;
+}
+.msg-md hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.75rem 0;
 }
 .msg-md strong {
   font-weight: 650;

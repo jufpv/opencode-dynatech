@@ -2,11 +2,11 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs"
 import { basename, join } from "node:path"
 import { getCurrentProject } from "./projects.ts"
 
-const README_CANDIDATES = ["README.md", "Readme.md", "readme.md", "README.markdown", "README"]
+const AGENTS_CANDIDATES = ["AGENTS.md", "Agents.md", "agents.md"]
 
 const MAX_BYTES = 2 * 1024 * 1024
 
-export interface ProjectReadmePayload {
+export interface ProjectAgentsPayload {
   projectId: string
   projectName: string
   directory: string
@@ -22,14 +22,14 @@ function requireCurrentDirectory(): { id: string; name: string; directory: strin
   return current
 }
 
-function findExistingReadme(directory: string): string | null {
-  for (const name of README_CANDIDATES) {
+function findExistingAgents(directory: string): string | null {
+  for (const name of AGENTS_CANDIDATES) {
     const full = join(directory, name)
     if (existsSync(full)) return full
   }
 
   try {
-    const match = readdirSync(directory).find((entry) => /^readme(\.|$)/i.test(entry))
+    const match = readdirSync(directory).find((entry) => /^agents(\.|$)/i.test(entry))
     if (match) {
       const full = join(directory, match)
       if (existsSync(full)) return full
@@ -41,16 +41,16 @@ function findExistingReadme(directory: string): string | null {
   return null
 }
 
-export function getProjectReadme(): ProjectReadmePayload {
+export function getProjectAgents(): ProjectAgentsPayload {
   const current = requireCurrentDirectory()
-  const existing = findExistingReadme(current.directory)
-  const path = existing || join(current.directory, "README.md")
+  const existing = findExistingAgents(current.directory)
+  const path = existing || join(current.directory, "AGENTS.md")
   const exists = Boolean(existing)
   let content = ""
 
   if (exists) {
     const raw = readFileSync(path)
-    if (raw.byteLength > MAX_BYTES) throw new Error("README trop volumineux")
+    if (raw.byteLength > MAX_BYTES) throw new Error("AGENTS.md trop volumineux")
     content = raw.toString("utf8")
   }
 
@@ -65,15 +65,15 @@ export function getProjectReadme(): ProjectReadmePayload {
   }
 }
 
-export function saveProjectReadme(content: string): ProjectReadmePayload {
+export function saveProjectAgents(content: string): ProjectAgentsPayload {
   if (typeof content !== "string") throw new Error("Contenu invalide")
   if (Buffer.byteLength(content, "utf8") > MAX_BYTES) {
-    throw new Error("README trop volumineux")
+    throw new Error("AGENTS.md trop volumineux")
   }
 
   const current = requireCurrentDirectory()
-  const existing = findExistingReadme(current.directory)
-  const path = existing || join(current.directory, "README.md")
+  const existing = findExistingAgents(current.directory)
+  const path = existing || join(current.directory, "AGENTS.md")
   const normalized = content.endsWith("\n") ? content : `${content}\n`
   writeFileSync(path, normalized, "utf8")
 

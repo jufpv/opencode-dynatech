@@ -1,6 +1,6 @@
 import type { UiTheme } from "./theme.ts"
 import { themeColorScheme } from "./theme.ts"
-import { NAV_CSS, renderShell } from "../../shell/nav.ts"
+import { ICON_PLUS, NAV_CSS, renderShell } from "../../shell/nav.ts"
 
 export function renderUiPage(timezone: string, theme: UiTheme): string {
   const tz = escapeHtml(timezone)
@@ -13,7 +13,7 @@ export function renderUiPage(timezone: string, theme: UiTheme): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="color-scheme" content="${colorScheme}">
-  <title>Tâches planifiées · OpenCode</title>
+  <title>Automatisations · OpenCode</title>
   <style>${CSS}${NAV_CSS}${fontOverrides}</style>
 </head>
 <body>
@@ -21,13 +21,13 @@ export function renderUiPage(timezone: string, theme: UiTheme): string {
     null,
     `
     <div class="view view-tasks" id="view-tasks">
-      <section class="panel" aria-labelledby="tasks-title">
+      <section class="panel" aria-labelledby="automations-title">
         <header class="page-chrome">
           <div class="entity-list-header">
             <div>
-              <h2 id="tasks-title">Tâches planifiées</h2>
+              <h2 id="automations-title">Automatisations</h2>
             </div>
-            <button type="button" class="entity-add-btn" id="tasks-add-btn">Ajouter</button>
+            <button type="button" class="entity-add-btn" id="tasks-add-btn" title="Ajouter" aria-label="Ajouter">${ICON_PLUS}</button>
           </div>
           <div class="page-sep" role="separator" aria-hidden="true"></div>
         </header>
@@ -39,7 +39,7 @@ export function renderUiPage(timezone: string, theme: UiTheme): string {
         <div class="tasks-error hidden" id="tasks-error"></div>
         <div class="task-list" id="tasks-list"></div>
         <div class="tasks-empty hidden" id="tasks-empty">
-          Aucune tâche planifiée.<br>
+          Aucune automatisation.<br>
           Cliquez sur « Ajouter » pour envoyer un message automatique à OpenCode.
         </div>
       </section>
@@ -1183,7 +1183,7 @@ async function loadScheduledTasks() {
   try {
     const res = await fetch("/api/cron");
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Impossible de charger les tâches planifiées.");
+    if (!res.ok) throw new Error(data.error ?? "Impossible de charger les automatisations.");
     scheduledTasks = data.tasks ?? [];
     const dirEl = document.getElementById("tasks-directory");
     if (dirEl) {

@@ -3,15 +3,7 @@ import type { UiTheme } from "../../shell/theme.ts"
 import { themeColorScheme } from "../../shell/theme.ts"
 import { NAV_CSS, renderShell } from "../../shell/nav.ts"
 
-const ICON_CRON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`
-
-const ICON_AGENT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>`
-
-const ICON_MODEL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M12 18v4"/></svg>`
-
-const ICON_SETTINGS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`
-
-const ICON_CHEVRON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>`
+const ICON_EDIT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`
 
 export function renderHomePage(theme: UiTheme): string {
   const colorScheme = themeColorScheme(theme.mode)
@@ -35,66 +27,36 @@ export function renderHomePage(theme: UiTheme): string {
         <header class="page-chrome">
           <div class="entity-list-header">
             <div>
-              <h2 id="readme-title">Description du projet</h2>
+              <h2 id="readme-title">Instructions personnalisées</h2>
             </div>
-            <button type="button" class="entity-add-btn" id="readme-edit">Modifier</button>
+            <button type="button" class="entity-add-btn" id="readme-edit" title="Modifier" aria-label="Modifier">${ICON_EDIT}</button>
           </div>
           <div class="page-sep" role="separator" aria-hidden="true"></div>
         </header>
         <div class="banner-error hidden" id="home-error"></div>
         <article class="readme-preview msg-md" id="readme-preview" aria-live="polite"></article>
-        <div class="readme-empty hidden" id="readme-empty">Aucun README pour ce projet.</div>
-        <div class="page-sep" role="separator" aria-hidden="true"></div>
-        <div class="home-section home-status">
-          <div class="status-chain" aria-label="Chaîne de fonctionnement">
-            <div class="status-node">
-              <span class="status-icon err" id="cron-icon" title="Cron">${ICON_CRON}</span>
-              <span class="status-node-label">Cron</span>
-            </div>
-            <div class="status-chain-dots" aria-hidden="true">
-              <span></span><span></span><span></span>
-            </div>
-            <div class="status-node">
-              <span class="status-icon err" id="opencode-icon" title="OpenCode">${ICON_AGENT}</span>
-              <span class="status-node-label">OpenCode</span>
-            </div>
-            <div class="status-chain-dots" aria-hidden="true">
-              <span></span><span></span><span></span>
-            </div>
-            <div class="status-node status-node-model">
-              <span class="status-icon err" id="model-icon" title="Modèle">${ICON_MODEL}</span>
-              <span class="status-node-label model-name" id="model-name">—</span>
-            </div>
-          </div>
-        </div>
-        <div class="page-sep" role="separator" aria-hidden="true"></div>
-        <a class="home-link" href="/skills">
-          <span class="home-link-icon" aria-hidden="true">${ICON_SETTINGS}</span>
-          <span class="home-link-title">Réglages</span>
-          <span class="home-link-chevron" aria-hidden="true">${ICON_CHEVRON}</span>
-        </a>
+        <div class="readme-empty hidden" id="readme-empty">Aucun AGENTS.md pour ce projet.</div>
       </section>
     </div>
     <div class="view hidden" id="view-editor">
-      <section class="panel">
+      <section class="panel editor-panel">
         <div class="entity-editor-header">
           <button type="button" class="entity-editor-back" id="btn-back">← Retour</button>
-          <h2 id="editor-title">Modifier README</h2>
+          <h2 id="editor-title">Modifier AGENTS.md</h2>
         </div>
         <div class="banner-error hidden" id="editor-error"></div>
         <form id="readme-form" class="entity-form">
-          <label>
-            Contenu
+          <div class="readme-editor-field">
             <textarea
               id="readme-input"
               class="readme-input"
               data-code-lang="markdown"
-              data-code-min-height="18rem"
               rows="1"
               spellcheck="false"
-              placeholder="Contenu du README racine du projet…"
+              aria-label="Contenu AGENTS.md"
+              placeholder="Contenu du fichier AGENTS.md racine du projet…"
             ></textarea>
-          </label>
+          </div>
           <div class="entity-form-toolbar">
             <p class="readme-status" id="readme-status" aria-live="polite"></p>
             <div class="entity-form-actions">
@@ -158,8 +120,8 @@ const HOME_JS = `
       previewEl.classList.add("hidden");
       emptyEl.classList.remove("hidden");
       emptyEl.textContent = exists
-        ? "Le README est vide."
-        : "Aucun README pour ce projet.";
+        ? "AGENTS.md est vide."
+        : "Aucun AGENTS.md pour ce projet.";
       return;
     }
     emptyEl.classList.add("hidden");
@@ -170,6 +132,7 @@ const HOME_JS = `
   function showHome() {
     viewHome.classList.remove("hidden");
     viewEditor.classList.add("hidden");
+    document.querySelector(".shell")?.classList.remove("is-editor");
     showError(editorError, "");
     setStatus("");
   }
@@ -177,12 +140,13 @@ const HOME_JS = `
   function showEditor() {
     viewEditor.classList.remove("hidden");
     viewHome.classList.add("hidden");
+    document.querySelector(".shell")?.classList.add("is-editor");
     showError(homeError, "");
     showError(editorError, "");
     input.value = loadedContent;
-    setStatus(exists ? "" : "L’enregistrement créera README.md");
+    setStatus(exists ? "" : "L’enregistrement créera AGENTS.md");
     if (!editorReady && window.CodeEditor) {
-      window.CodeEditor.enhance(input, { lang: "markdown", minHeight: "18rem" });
+      window.CodeEditor.enhance(input, { lang: "markdown", fill: true });
       editorReady = true;
     } else if (window.CodeEditor) {
       window.CodeEditor.refresh(input);
@@ -193,7 +157,7 @@ const HOME_JS = `
   async function loadReadme() {
     showError(homeError, "");
     try {
-      const res = await fetch("/api/project/readme", { cache: "no-store" });
+      const res = await fetch("/api/project/agents", { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
       loadedContent = typeof data.content === "string" ? data.content : "";
@@ -207,7 +171,7 @@ const HOME_JS = `
       loadedContent = "";
       exists = false;
       renderPreview("");
-      showError(homeError, err instanceof Error ? err.message : "Impossible de charger le README");
+      showError(homeError, err instanceof Error ? err.message : "Impossible de charger AGENTS.md");
     }
   }
 
@@ -218,7 +182,7 @@ const HOME_JS = `
     showError(editorError, "");
     setStatus("Enregistrement…");
     try {
-      const res = await fetch("/api/project/readme", {
+      const res = await fetch("/api/project/agents", {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ content: input.value }),
@@ -231,7 +195,7 @@ const HOME_JS = `
       setStatus("Enregistré");
       showHome();
     } catch (err) {
-      showError(editorError, err instanceof Error ? err.message : "Impossible d'enregistrer le README");
+      showError(editorError, err instanceof Error ? err.message : "Impossible d'enregistrer AGENTS.md");
       setStatus("");
     } finally {
       saving = false;
@@ -261,45 +225,6 @@ const HOME_JS = `
   });
 
   void loadReadme();
-
-  const cronIcon = document.getElementById("cron-icon");
-  const opencodeIcon = document.getElementById("opencode-icon");
-  const modelIcon = document.getElementById("model-icon");
-  const modelNameEl = document.getElementById("model-name");
-
-  function setIcon(el, ok) {
-    if (!el) return;
-    el.classList.toggle("ok", ok);
-    el.classList.toggle("err", !ok);
-  }
-
-  function shortModelName(name) {
-    if (!name) return "—";
-    return name.length > 28 ? name.slice(0, 27) + "…" : name;
-  }
-
-  async function pollStatus() {
-    if (!cronIcon || !opencodeIcon || !modelIcon || !modelNameEl) return;
-    try {
-      const res = await fetch("/api/status", { cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
-      setIcon(cronIcon, Boolean(data.cronConnected));
-      setIcon(opencodeIcon, Boolean(data.opencodeConnected));
-      setIcon(modelIcon, Boolean(data.modelConnected));
-      modelNameEl.textContent = shortModelName(data.modelName);
-      modelNameEl.title = data.modelName || "Modèle";
-    } catch {
-      setIcon(cronIcon, false);
-      setIcon(opencodeIcon, false);
-      setIcon(modelIcon, false);
-      modelNameEl.textContent = "—";
-      modelNameEl.title = "Modèle";
-    }
-  }
-
-  pollStatus();
-  setInterval(pollStatus, 2000);
 })();
 `
 
@@ -313,11 +238,76 @@ body{font-family:var(--font);font-size:var(--font-size);background:var(--bg);col
 `
 
 const HOME_CSS = `
+/* Mode édition : viewport figé, footer collé en bas, éditeur scrollable */
+.shell.is-editor {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  justify-content: center;
+  align-items: stretch;
+  padding: var(--shell-pad);
+  box-sizing: border-box;
+}
+.shell.is-editor .shell-cluster {
+  flex: 0 1 auto;
+  align-self: stretch;
+  width: min(var(--content-max), 100%);
+  max-width: var(--content-max);
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.shell.is-editor .shell-top-row {
+  position: relative;
+  top: auto;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0 0 0.55rem;
+  background: var(--bg);
+}
+.shell.is-editor .shell-body,
+.shell.is-editor .shell-stack {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.shell.is-editor .shell-box,
+.shell.is-editor .app {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#view-editor {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#view-editor.hidden {
+  display: none !important;
+}
+#view-editor .editor-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: hidden;
+  padding-bottom: 0.75rem;
+}
 .entity-editor-header {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   margin: 0;
+  flex: 0 0 auto;
 }
 .entity-editor-back {
   border: 1px solid var(--border);
@@ -338,37 +328,36 @@ const HOME_CSS = `
   font-weight: 600;
 }
 .entity-form {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  overflow: hidden;
 }
-.entity-form label {
+.readme-editor-field {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.8rem;
-  color: var(--text-muted);
+  overflow: hidden;
 }
 .entity-form-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-top: 0.5rem;
-  padding-top: 0.55rem;
+  margin: 0;
+  padding: 0.55rem 0 0;
+  flex: 0 0 auto;
   flex-wrap: wrap;
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--bg-elevated) 0%, transparent) 0%,
-    var(--bg-elevated) 28%
-  );
+  border-top: 1px solid var(--border);
+  background: var(--bg-elevated);
 }
 .entity-form-actions {
   display: flex;
   gap: 0.5rem;
+  margin-left: auto;
 }
 .entity-form-actions button {
   border-radius: 999px;
@@ -394,6 +383,7 @@ const HOME_CSS = `
   border: 1px solid var(--err-border);
   color: var(--err);
   font-size: 0.875rem;
+  flex: 0 0 auto;
 }
 .banner-error.hidden {
   display: none;
@@ -429,6 +419,11 @@ const HOME_CSS = `
 .readme-preview h6 { font-size: 0.95rem; }
 .readme-preview p {
   margin: 0.55rem 0;
+}
+.readme-preview hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1rem 0;
 }
 .readme-preview a {
   color: var(--accent);
@@ -493,6 +488,11 @@ const HOME_CSS = `
 .entity-form .code-editor {
   background: var(--bg);
 }
+.readme-editor-field .code-editor {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
 /* Opaque .readme-input styles must not cover the highlight layer behind the textarea. */
 .readme-input.code-editor-input {
   background: transparent;
@@ -502,7 +502,8 @@ const HOME_CSS = `
 }
 .readme-input:not(.code-editor-input) {
   width: 100%;
-  min-height: 18rem;
+  min-height: 0;
+  height: 100%;
   margin: 0;
   padding: 0.75rem 0.9rem;
   border: 1px solid var(--border);
@@ -513,127 +514,13 @@ const HOME_CSS = `
   font-family: var(--mono);
   font-size: 0.86rem;
   line-height: 1.5;
-  resize: vertical;
+  resize: none;
+  overflow: auto;
 }
 .readme-status {
   margin: 0;
   min-height: 1.1rem;
   font-size: 0.78rem;
   color: var(--text-muted);
-}
-.home-status {
-  width: min(22rem, 100%);
-  min-width: 0;
-  margin-inline: auto;
-}
-.home-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  width: fit-content;
-  margin: 0 auto;
-  padding: 0.2rem 0.35rem;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-muted);
-  text-decoration: none;
-  font: inherit;
-  transition: color .15s, background .15s;
-}
-.home-link:hover {
-  color: var(--text);
-  background: var(--bg-muted);
-}
-.home-link-icon {
-  flex: 0 0 auto;
-  width: 0.95rem;
-  height: 0.95rem;
-  display: inline-flex;
-  opacity: 0.85;
-}
-.home-link-icon svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-.home-link-title {
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-.home-link-chevron {
-  flex: 0 0 auto;
-  width: 0.85rem;
-  height: 0.85rem;
-  display: inline-flex;
-  opacity: 0.7;
-}
-.home-link-chevron svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-.status-chain {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  width: 100%;
-  min-width: 0;
-}
-.status-node {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
-  min-width: 0;
-}
-.status-node-model {
-  max-width: 8.5rem;
-}
-.status-icon {
-  width: 1.55rem;
-  height: 1.55rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--err);
-  transition: color .2s;
-}
-.status-icon.ok {
-  color: var(--ok);
-}
-.status-icon.err {
-  color: var(--err);
-}
-.status-icon svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-.status-node-label {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  text-align: center;
-  line-height: 1.2;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.status-chain-dots {
-  display: flex;
-  align-items: center;
-  gap: 0.22rem;
-  padding: 0 0.1rem 1.05rem;
-  flex: 0 0 auto;
-}
-.status-chain-dots span {
-  width: 0.22rem;
-  height: 0.22rem;
-  border-radius: 999px;
-  background: var(--border-strong);
-  opacity: 0.85;
 }
 `

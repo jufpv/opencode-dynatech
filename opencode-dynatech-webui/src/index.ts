@@ -7,6 +7,7 @@ import { createDocumentsModule } from "./modules/documents/index.ts"
 import { createHomeModule } from "./modules/home/index.ts"
 import { createMcpsModule } from "./modules/mcps/index.ts"
 import { createSkillsModule } from "./modules/skills/index.ts"
+import { createStatusModule } from "./modules/status/index.ts"
 import { createToolsModule } from "./modules/tools/index.ts"
 import { startWebuiServer } from "./server.ts"
 import { listEnabledCustomToolFiles } from "./services/tools.ts"
@@ -78,6 +79,7 @@ export default Plugin.define({
             createChatModule(),
             createDocumentsModule(),
             createCronModule(options.cronApiUrl),
+            createStatusModule(),
             createSkillsModule(),
             createToolsModule(),
             createMcpsModule(),
@@ -100,8 +102,8 @@ export default Plugin.define({
 
     await ctx.command.transform((commands) => {
       commands.update("cron", (command) => {
-        command.description = "Ouvrir l'UI des tâches planifiées"
-        command.template = openUiTemplate(cronUrl, "La page des tâches planifiées")
+        command.description = "Ouvrir l'UI des automatisations"
+        command.template = openUiTemplate(cronUrl, "La page des automatisations")
       })
       commands.update("webui", (command) => {
         command.description = "Ouvrir l'accueil Dynatech WebUI"

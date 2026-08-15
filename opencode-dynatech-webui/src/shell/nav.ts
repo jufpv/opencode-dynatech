@@ -1,9 +1,10 @@
 import { getProjectsPayload } from "../services/projects.ts"
 
-export type NavId = "skills" | "tools" | "mcps"
-export type RailId = "home" | "chat" | "documents" | "cron"
+export type NavId = "status" | "skills" | "tools" | "mcps"
+export type RailId = "home" | "chat" | "documents" | "cron" | "settings"
 
 const ITEMS: Array<{ id: NavId; href: string; label: string }> = [
+  { id: "status", href: "/status", label: "Statut" },
   { id: "skills", href: "/skills", label: "Skills" },
   { id: "tools", href: "/tools", label: "Tools" },
   { id: "mcps", href: "/mcps", label: "MCP" },
@@ -15,8 +16,13 @@ const ICON_CHAT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 
 const ICON_DOCUMENTS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`
 
-/** Alfred sidebar icon for « Tâches planifiées ». */
+/** Alfred sidebar icon for « Automatisations ». */
 const ICON_CRON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`
+
+const ICON_SETTINGS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`
+
+/** Shared plus icon for circular add buttons (same stroke as rail icons). */
+export const ICON_PLUS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>`
 
 function escapeHtml(text: string): string {
   return text
@@ -38,19 +44,25 @@ export function renderNav(active: NavId | null): string {
 
 export function renderRail(active: RailId | null): string {
   return `<aside class="app-rail" aria-label="Navigation principale">
-  <nav class="app-rail-nav">
+  <nav class="app-rail-bubble" aria-label="Accueil">
     <a class="app-rail-btn${active === "home" ? " active" : ""}" href="/" title="Accueil" aria-label="Accueil" data-rail="home">
       ${ICON_HOME}
     </a>
-    <span class="app-rail-sep" aria-hidden="true"></span>
+  </nav>
+  <nav class="app-rail-bubble" aria-label="Espace de travail">
     <a class="app-rail-btn${active === "chat" ? " active" : ""}" href="/chat" title="Chat" aria-label="Chat" data-rail="chat">
       ${ICON_CHAT}
     </a>
     <a class="app-rail-btn${active === "documents" ? " active" : ""}" href="/documents" title="Documents" aria-label="Documents" data-rail="documents">
       ${ICON_DOCUMENTS}
     </a>
-    <a class="app-rail-btn${active === "cron" ? " active" : ""}" href="/cron" title="Tâches planifiées" aria-label="Tâches planifiées" data-rail="cron">
+    <a class="app-rail-btn${active === "cron" ? " active" : ""}" href="/cron" title="Automatisations" aria-label="Automatisations" data-rail="cron">
       ${ICON_CRON}
+    </a>
+  </nav>
+  <nav class="app-rail-bubble" aria-label="Réglages">
+    <a class="app-rail-btn${active === "settings" ? " active" : ""}" href="/status" title="Réglages" aria-label="Réglages" data-rail="settings">
+      ${ICON_SETTINGS}
     </a>
   </nav>
 </aside>`
@@ -80,7 +92,7 @@ function renderProjectBar(): string {
 
   parts.push(`<div class="project-sep" role="separator"></div>`)
   parts.push(
-    `<button type="button" class="project-action" id="project-add" role="option"><span class="project-action-icon" aria-hidden="true">+</span><span>Ajouter un projet</span></button>`,
+    `<button type="button" class="project-action" id="project-add" role="option"><span class="project-action-icon" aria-hidden="true">${ICON_PLUS}</span><span>Ajouter un projet</span></button>`,
   )
   parts.push(`<div class="project-sep" role="separator"></div>`)
 
@@ -211,7 +223,8 @@ export function renderShell(
   const tabClass = active ? ` tab-${active}` : ""
   const stackExtra = options.stackClass ? ` ${options.stackClass}` : ""
   const shellExtra = options.shellClass ? ` ${options.shellClass}` : ""
-  const railActive: RailId | null = rail
+  // Skills/Tools/MCP pages pass NavId as `active` and leave rail unset → highlight Réglages.
+  const railActive: RailId | null = rail ?? (active ? "settings" : null)
   const tabs = options.tabsHtml ?? renderNav(active)
   return `<div class="shell${shellExtra}">
   <div class="shell-cluster">
@@ -402,11 +415,14 @@ export const NAV_CSS = `
   align-items: center;
   justify-content: center;
   width: 1.1rem;
+  height: 1.1rem;
   flex-shrink: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-  line-height: 1;
   color: var(--text);
+}
+.project-action-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 .project-sep {
   height: 1px;
@@ -418,17 +434,18 @@ export const NAV_CSS = `
   color: var(--text-muted);
   font-size: 0.875rem;
 }
-/* Menu principal : une bulle ovale (liquid glass) à droite de la barre projet */
+/* Menu principal : 3 bulles (Accueil · espace de travail · Réglages) */
 .app-rail {
   flex: 0 0 auto;
   margin-left: auto;
   display: flex;
   align-items: center;
+  gap: 0.4rem;
   padding: 0;
   border: none;
   background: transparent;
 }
-.app-rail-nav {
+.app-rail-bubble {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -447,14 +464,14 @@ export const NAV_CSS = `
     inset 0 -0.5px 0 color-mix(in srgb, var(--text) 8%, transparent);
 }
 @media (prefers-color-scheme: dark) {
-  :root[data-theme="system"] .app-rail-nav {
+  :root[data-theme="system"] .app-rail-bubble {
     background: color-mix(in srgb, var(--bg-elevated) 55%, transparent);
     box-shadow:
       0 1px 3px rgba(0, 0, 0, 0.35),
       inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 }
-:root[data-theme="dark"] .app-rail-nav {
+:root[data-theme="dark"] .app-rail-bubble {
   background: color-mix(in srgb, var(--bg-elevated) 55%, transparent);
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.35),
@@ -494,14 +511,6 @@ export const NAV_CSS = `
 }
 .app-rail-btn:active {
   transform: scale(0.96);
-}
-.app-rail-sep {
-  flex: 0 0 auto;
-  width: 1px;
-  height: 1rem;
-  margin: 0 0.12rem;
-  background: color-mix(in srgb, var(--border-strong, var(--border)) 80%, transparent);
-  opacity: 0.7;
 }
 .shell-stack {
   flex: 1 1 auto;
@@ -555,7 +564,7 @@ export const NAV_CSS = `
   overflow: clip;
 }
 /* Premier onglet actif : le coin haut-gauche de la box se fond dans l'onglet */
-.shell-stack.tab-skills .shell-box {
+.shell-stack.tab-status .shell-box {
   border-top-left-radius: 0;
 }
 .app {
@@ -566,7 +575,7 @@ export const NAV_CSS = `
 .shell-box .panel {
   padding: 0.85rem 0.75rem 1rem;
 }
-/* En-tête partagé Accueil / Discussions / Documents / Cron */
+/* En-tête partagé Accueil / Discussions / Documents / Automatisations */
 .page-chrome .entity-list-header {
   display: flex;
   align-items: center;
@@ -595,11 +604,15 @@ export const NAV_CSS = `
 }
 .entity-add-btn {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
   border-radius: 999px;
-  padding: 0.45rem 0.95rem;
+  padding: 0;
   font: inherit;
-  font-size: 0.84rem;
-  font-weight: 600;
+  line-height: 0;
   background: var(--primary);
   color: var(--primary-fg);
   border: 1px solid var(--primary);
@@ -611,11 +624,16 @@ export const NAV_CSS = `
   border-color: var(--primary-hover);
 }
 .entity-add-btn:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.96);
 }
 .entity-add-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+.entity-add-btn svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  display: block;
 }
 /* Chat : colonne centrée, viewport figé — seuls les messages scrollent */
 .shell.is-chat {

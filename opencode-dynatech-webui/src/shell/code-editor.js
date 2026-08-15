@@ -185,9 +185,10 @@
 
     const highlight = resolveHighlighter(textarea, options);
     const minHeightOption = options.minHeight ?? textarea.dataset.codeMinHeight;
+    const fill = Boolean(options.fill) || textarea.dataset.codeFill === "true";
 
     const wrap = document.createElement("div");
-    wrap.className = "code-editor";
+    wrap.className = fill ? "code-editor code-editor-fill" : "code-editor";
 
     const pre = document.createElement("pre");
     pre.className = "code-editor-highlight";
@@ -198,18 +199,37 @@
 
     textarea.classList.add("code-editor-input");
     textarea.style.resize = "none";
-    textarea.style.overflow = "hidden";
+    textarea.style.overflowX = "auto";
+    textarea.style.overflowY = fill ? "auto" : "hidden";
+    if (fill) {
+      textarea.style.height = "100%";
+    }
 
     textarea.parentNode?.insertBefore(wrap, textarea);
     wrap.appendChild(pre);
     wrap.appendChild(textarea);
 
     textarea._codeEditorMinHeightPx = parseMinHeightPx(textarea, minHeightOption);
+    textarea._codeEditorFill = fill;
+    let syncingHeight = false;
 
     function syncHeight() {
-      const minPx = textarea._codeEditorMinHeightPx ?? 72;
-      textarea.style.height = "0px";
-      textarea.style.height = `${Math.max(minPx, textarea.scrollHeight)}px`;
+      if (fill || syncingHeight) return;
+      syncingHeight = true;
+      try {
+        const minPx = textarea._codeEditorMinHeightPx ?? 72;
+        // Collapsing to 0 to measure scrollHeight resets page scroll; preserve it.
+        const pageX = window.scrollX;
+        const pageY = window.scrollY;
+        textarea.style.height = "0px";
+        const next = Math.max(minPx, textarea.scrollHeight);
+        textarea.style.height = `${next}px`;
+        if (window.scrollX !== pageX || window.scrollY !== pageY) {
+          window.scrollTo(pageX, pageY);
+        }
+      } finally {
+        syncingHeight = false;
+      }
     }
 
     function syncHighlight() {
@@ -233,10 +253,11 @@
 
     if (typeof ResizeObserver !== "undefined") {
       const resizeObserver = new ResizeObserver(() => {
-        syncHeight();
+        if (syncingHeight) return;
+        if (!fill) syncHeight();
         syncScroll();
       });
-      resizeObserver.observe(textarea);
+      resizeObserver.observe(fill ? wrap : textarea);
       textarea._codeEditorResizeObserver = resizeObserver;
     }
 

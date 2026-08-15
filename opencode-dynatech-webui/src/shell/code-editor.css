@@ -7,6 +7,14 @@
   overflow: hidden;
 }
 
+.code-editor-fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .code-editor-highlight,
 .code-editor-input {
   margin: 0;
@@ -49,13 +57,21 @@
   display: block;
   width: 100%;
   min-height: 4.5rem;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   resize: none;
   background: transparent;
   color: transparent;
   -webkit-text-fill-color: transparent;
   caret-color: var(--text);
   outline: none;
+}
+
+.code-editor-fill .code-editor-input {
+  flex: 1 1 auto;
+  height: 100% !important;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .code-editor-input::selection {

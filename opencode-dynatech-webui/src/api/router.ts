@@ -1,8 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
+import { readMultipartForm } from "../lib/multipart.ts"
 import * as events from "../services/events.ts"
 import * as localFiles from "../services/local-files.ts"
 import * as mcps from "../services/mcps.ts"
-import * as projectReadme from "../services/project-readme.ts"
+import * as projectAgents from "../services/project-agents.ts"
+import * as projectFiles from "../services/project-files.ts"
 import * as projects from "../services/projects.ts"
 import * as sessions from "../services/sessions.ts"
 import * as skills from "../services/skills.ts"
@@ -190,18 +192,75 @@ export async function handleConfigApi(
       return true
     }
 
-    if (pathname === "/api/project/readme" && method === "GET") {
-      sendJson(res, 200, projectReadme.getProjectReadme())
+    if (pathname === "/api/project/agents" && method === "GET") {
+      sendJson(res, 200, projectAgents.getProjectAgents())
       return true
     }
 
-    if (pathname === "/api/project/readme" && (method === "PUT" || method === "POST")) {
+    if (pathname === "/api/project/agents" && (method === "PUT" || method === "POST")) {
       const body = (await readJson(req)) as { content?: unknown }
       if (typeof body.content !== "string") {
         sendJson(res, 400, { error: "content requis" })
         return true
       }
-      sendJson(res, 200, { ok: true, ...projectReadme.saveProjectReadme(body.content) })
+      sendJson(res, 200, { ok: true, ...projectAgents.saveProjectAgents(body.content) })
+      return true
+    }
+
+    if (pathname === "/api/project/files" && method === "GET") {
+      sendJson(res, 200, projectFiles.listProjectFiles(url.searchParams.get("path")))
+      return true
+    }
+
+    if (pathname === "/api/project/files" && method === "POST") {
+      const form = await readMultipartForm(req)
+      const dir = form.fields.path ?? url.searchParams.get("path") ?? ""
+      const result = projectFiles.importProjectFiles(
+        dir,
+        form.files.map((f) => ({ name: f.filename, data: f.data })),
+      )
+      sendJson(res, 200, { ok: true, ...result, ...projectFiles.listProjectFiles(dir) })
+      return true
+    }
+
+    if (pathname === "/api/project/mkdir" && method === "POST") {
+      const body = (await readJson(req)) as { path?: unknown; name?: unknown }
+      const dir = typeof body.path === "string" ? body.path : ""
+      if (typeof body.name !== "string" || !body.name.trim()) {
+        sendJson(res, 400, { error: "name requis" })
+        return true
+      }
+      sendJson(res, 201, {
+        ok: true,
+        ...projectFiles.createProjectFolder(dir, body.name),
+      })
+      return true
+    }
+
+    if (pathname === "/api/project/file" && method === "GET") {
+      if (url.searchParams.get("raw") === "1" || url.searchParams.get("raw") === "true") {
+        const file = projectFiles.readProjectFileRaw(url.searchParams.get("path"))
+        res.writeHead(200, {
+          "content-type": file.contentType,
+          "content-disposition": file.contentDisposition,
+          "content-length": String(file.body.length),
+          "cache-control": "private, max-age=60",
+        })
+        res.end(file.body)
+        return true
+      }
+      sendJson(res, 200, projectFiles.readProjectFile(url.searchParams.get("path")))
+      return true
+    }
+
+    if (pathname === "/api/project/file" && method === "DELETE") {
+      const target = url.searchParams.get("path") || ""
+      if (!target.trim()) {
+        sendJson(res, 400, { error: "path requis" })
+        return true
+      }
+      const result = projectFiles.deleteProjectEntry(target)
+      sendJson(res, 200, { ok: true, deleted: result.deleted, ...result.listing })
       return true
     }
 

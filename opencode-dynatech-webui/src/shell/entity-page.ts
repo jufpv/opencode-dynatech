@@ -1,6 +1,6 @@
 import type { UiTheme } from "./theme.ts"
 import { themeColorScheme } from "./theme.ts"
-import { NAV_CSS, renderShell, type NavId } from "./nav.ts"
+import { ICON_PLUS, NAV_CSS, renderShell, type NavId } from "./nav.ts"
 
 export type EntityKind = "skills" | "tools" | "mcps"
 
@@ -59,7 +59,7 @@ export function renderEntityPage(kind: EntityKind, theme: UiTheme): string {
             <h2>${meta.heading}</h2>
             <p>${meta.blurb}</p>
           </div>
-          <button type="button" class="entity-add-btn" id="btn-add">Ajouter</button>
+          <button type="button" class="entity-add-btn" id="btn-add" title="Ajouter" aria-label="Ajouter">${ICON_PLUS}</button>
         </div>
         <div class="banner-error hidden" id="list-error"></div>
         <div id="list" class="card-list"></div>
@@ -97,8 +97,9 @@ body{font-family:var(--font);font-size:var(--font-size);background:var(--bg);col
 .entity-list-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem}
 .entity-list-header h2{font-size:1.125rem;font-weight:600;letter-spacing:-.01em;margin-bottom:.35rem}
 .entity-list-header p{font-size:.875rem;color:var(--text-muted);line-height:1.5;max-width:36rem}
-.entity-add-btn{flex-shrink:0;border-radius:999px;padding:.45rem .95rem;font-size:.84rem;font-weight:600;background:var(--primary);color:var(--primary-fg);border:1px solid var(--primary);cursor:pointer;font:inherit}
+.entity-add-btn{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:2.35rem;height:2.35rem;border-radius:999px;padding:0;line-height:0;background:var(--primary);color:var(--primary-fg);border:1px solid var(--primary);cursor:pointer;font:inherit}
 .entity-add-btn:hover{background:var(--primary-hover)}
+.entity-add-btn svg{width:1.1rem;height:1.1rem;display:block}
 .entity-editor-header{display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem}
 .entity-editor-back{border:1px solid var(--border);border-radius:8px;background:var(--bg-elevated);color:var(--text-muted);padding:.4rem .75rem;font-size:.84rem;cursor:pointer;font:inherit}
 .entity-editor-back:hover{background:var(--bg-hover);color:var(--text)}
