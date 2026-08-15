@@ -52,6 +52,7 @@ if not isinstance(plugins, list):
 options = {
     "uiPort": 9877,
     "cronApiUrl": "http://127.0.0.1:8788",
+    "mdnsHost": "alfred",
 }
 
 def is_webui_plugin(item):

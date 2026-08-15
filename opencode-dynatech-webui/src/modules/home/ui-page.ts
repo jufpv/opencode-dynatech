@@ -73,7 +73,7 @@ export function renderHomePage(theme: UiTheme): string {
       </a>
     </section>
   `,
-    null,
+    "home",
   )}
   <script>${HOME_JS}</script>
 </body>

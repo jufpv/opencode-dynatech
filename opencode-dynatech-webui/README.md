@@ -20,7 +20,7 @@ Dépend de [`opencode-dynatech-cron`](../opencode-dynatech-cron) pour l’API JS
 ## Utilisation
 
 - Navigateur (Mac) : [http://127.0.0.1:9877/](http://127.0.0.1:9877/)
-- Réseau local (téléphone) : `http://<ip-du-mac>:9877/`
+- Réseau local : [http://alfred.local/](http://alfred.local/) si le proxy port 80 est disponible, sinon [http://alfred.local:9877/](http://alfred.local:9877/) (ou `http://<ip-du-mac>:9877/`)
 - Pages : `/` (accueil), `/chat`, `/documents`, `/cron`, `/skills`, `/tools`, `/mcps`
 - Slash chat : `/webui` (ouvre `/`), `/cron` (ouvre `/cron`)
 
@@ -50,7 +50,8 @@ Pas de relais / WebSocket. La webui lit/écrit directement :
   "package": ".../opencode-dynatech-webui/src/index.ts",
   "options": {
     "uiPort": 9877,
-    "cronApiUrl": "http://127.0.0.1:8788"
+    "cronApiUrl": "http://127.0.0.1:8788",
+    "mdnsHost": "alfred"
   }
 }
 ```
@@ -59,6 +60,9 @@ Pas de relais / WebSocket. La webui lit/écrit directement :
 |---|---|---|
 | `uiPort` | `9877` | Port UI (`0` pour désactiver). Écoute sur `0.0.0.0` (LAN). |
 | `cronApiUrl` | `http://127.0.0.1:8788` | Base de l’API cron |
+| `mdnsHost` | `alfred` | Annonce Bonjour/mDNS (`alfred.local`). Chaîne vide pour désactiver. |
+
+Pour `http://alfred.local/` **sans** `:9877`, le plugin tente un reverse-proxy sur le **port 80**. Sur macOS cela demande en général les droits admin (OpenCode lancé en admin, ou un outil qui bind le port 80). Sinon l’URL reste `http://alfred.local:9877/`.
 
 ## Développement
 

@@ -13,10 +13,26 @@ export interface RecentSession {
   href: string
 }
 
+export type ToolPartStatus = "streaming" | "running" | "completed" | "error"
+
+export type SessionMessagePart =
+  | { type: "text"; text: string }
+  | { type: "reasoning"; text: string }
+  | {
+      type: "tool"
+      id: string
+      name: string
+      status: ToolPartStatus
+      executed: boolean
+      error?: string
+      inputSummary?: string
+    }
+
 export interface SessionMessage {
   id: string
   role: "user" | "assistant"
   text: string
+  parts: SessionMessagePart[]
   createdAt: number
 }
 
@@ -33,7 +49,7 @@ interface RawSession {
   id?: string
   title?: string
   projectID?: string
-  model?: { id?: string; providerID?: string }
+  model?: { id?: string; providerID?: string; variant?: string }
   tokens?: {
     input?: number
     output?: number
@@ -52,9 +68,21 @@ interface RawModel {
   limit?: { context?: number }
 }
 
+interface RawToolState {
+  status?: string
+  input?: Record<string, unknown>
+  error?: { message?: string; type?: string }
+  content?: Array<{ type?: string; text?: string }>
+  metadata?: Record<string, unknown>
+}
+
 interface RawContentPart {
   type?: string
   text?: string
+  id?: string
+  name?: string
+  executed?: boolean
+  state?: RawToolState
 }
 
 interface RawMessage {
@@ -63,6 +91,13 @@ interface RawMessage {
   text?: string
   content?: RawContentPart[]
   time?: { created?: number; completed?: number }
+  tokens?: {
+    input?: number
+    output?: number
+    reasoning?: number
+    cache?: { read?: number; write?: number }
+  }
+  model?: { id?: string; providerID?: string }
 }
 
 function requireService() {
@@ -227,13 +262,43 @@ export async function getSessionContextUsage(
   const row = await fetchRawSession(id)
   if (!row?.id) return null
 
-  const used = Math.max(
-    0,
-    Number(row.tokens?.input || 0) + Number(row.tokens?.reasoning || 0),
-  )
+  // Match OpenCode Desktop: usage comes from the latest assistant message's
+  // token breakdown (input+output+reasoning+cache), not session totals.
+  let messages: RawMessage[] = []
+  try {
+    messages = await fetchSessionMessagesRaw(id, 30, "desc")
+  } catch {
+    messages = []
+  }
+  let used = 0
+  let modelFromMessage: { id?: string; providerID?: string } | undefined
+  for (const msg of messages) {
+    if (msg?.type !== "assistant") continue
+    const tokens = msg.tokens
+    if (!tokens) continue
+    used =
+      Number(tokens.input || 0) +
+      Number(tokens.output || 0) +
+      Number(tokens.reasoning || 0) +
+      Number(tokens.cache?.read || 0) +
+      Number(tokens.cache?.write || 0)
+    modelFromMessage = msg.model
+    break
+  }
+  if (used <= 0) {
+    used = Math.max(
+      0,
+      Number(row.tokens?.input || 0) +
+        Number(row.tokens?.output || 0) +
+        Number(row.tokens?.reasoning || 0) +
+        Number(row.tokens?.cache?.read || 0) +
+        Number(row.tokens?.cache?.write || 0),
+    )
+  }
+
   const resolved = await resolveModelContextLimit(
-    row.model?.id,
-    row.model?.providerID,
+    modelFromMessage?.id || row.model?.id,
+    modelFromMessage?.providerID || row.model?.providerID,
   )
   const safeLimit = resolved.limit > 0 ? resolved.limit : 0
   const ratio = safeLimit > 0 ? Math.min(1, used / safeLimit) : 0
@@ -293,26 +358,78 @@ export async function deleteSession(id: string): Promise<void> {
   }
 }
 
-function extractMessageText(msg: RawMessage): string {
+function summarizeToolInput(input: Record<string, unknown> | undefined): string | undefined {
+  if (!input || typeof input !== "object") return undefined
+  for (const key of ["query", "url", "path", "command", "pattern", "objective"]) {
+    const value = input[key]
+    if (typeof value === "string" && value.trim()) {
+      const trimmed = value.trim()
+      return trimmed.length > 120 ? `${trimmed.slice(0, 117)}…` : trimmed
+    }
+  }
+  return undefined
+}
+
+function normalizeToolStatus(status: string | undefined): ToolPartStatus {
+  if (status === "completed" || status === "error" || status === "running" || status === "streaming") {
+    return status
+  }
+  return "running"
+}
+
+function extractAssistantParts(msg: RawMessage): SessionMessagePart[] {
+  if (!Array.isArray(msg.content)) return []
+  const parts: SessionMessagePart[] = []
+  for (const part of msg.content) {
+    if (!part || typeof part !== "object") continue
+    if (part.type === "text" && typeof part.text === "string") {
+      const text = part.text.trim()
+      if (text) parts.push({ type: "text", text })
+      continue
+    }
+    if (part.type === "reasoning" && typeof part.text === "string") {
+      const text = part.text.trim()
+      if (text) parts.push({ type: "reasoning", text })
+      continue
+    }
+    if (part.type === "tool" && typeof part.name === "string" && part.name.trim()) {
+      const state = part.state && typeof part.state === "object" ? part.state : undefined
+      const errorMessage =
+        state?.error && typeof state.error.message === "string"
+          ? state.error.message.trim()
+          : undefined
+      parts.push({
+        type: "tool",
+        id: typeof part.id === "string" ? part.id : `${part.name}-${parts.length}`,
+        name: part.name.trim(),
+        status: normalizeToolStatus(state?.status),
+        executed: Boolean(part.executed),
+        error: errorMessage || undefined,
+        inputSummary: summarizeToolInput(state?.input),
+      })
+    }
+  }
+  return parts
+}
+
+function extractMessageText(msg: RawMessage, parts: SessionMessagePart[]): string {
   if (msg.type === "user") return (msg.text || "").trim()
-  if (!Array.isArray(msg.content)) return ""
-  return msg.content
-    .filter((part) => part?.type === "text" && typeof part.text === "string")
-    .map((part) => (part.text || "").trim())
-    .filter(Boolean)
+  return parts
+    .filter((part): part is Extract<SessionMessagePart, { type: "text" }> => part.type === "text")
+    .map((part) => part.text)
     .join("\n\n")
 }
 
-export async function listSessionMessages(
+async function fetchSessionMessagesRaw(
   id: string,
-  limit = 100,
-): Promise<SessionMessage[]> {
+  limit = 50,
+  order: "asc" | "desc" = "asc",
+): Promise<RawMessage[]> {
   const service = requireService()
   if (!id) return []
-
   const params = new URLSearchParams({
     limit: String(Math.max(1, Math.min(limit, 200))),
-    order: "asc",
+    order,
   })
   const result = await fetchOpencodeJson(
     `${service.url}/api/session/${encodeURIComponent(id)}/message?${params}`,
@@ -322,23 +439,116 @@ export async function listSessionMessages(
   if (!result.ok || !result.data || typeof result.data !== "object") {
     throw new Error("Impossible de charger les messages")
   }
-
   const rows = (result.data as { data?: RawMessage[] }).data
-  if (!Array.isArray(rows)) return []
+  return Array.isArray(rows) ? rows : []
+}
+
+export async function listSessionMessages(
+  id: string,
+  limit = 100,
+): Promise<SessionMessage[]> {
+  const rows = await fetchSessionMessagesRaw(id, limit, "asc")
 
   const out: SessionMessage[] = []
   for (const row of rows) {
     if (!row?.id) continue
     const role = row.type === "user" || row.type === "assistant" ? row.type : null
     if (!role) continue
-    const text = extractMessageText(row)
-    if (!text) continue
+    if (role === "user") {
+      const text = extractMessageText(row, [])
+      if (!text) continue
+      out.push({
+        id: row.id,
+        role,
+        text,
+        parts: [{ type: "text", text }],
+        createdAt: Number(row.time?.created || 0),
+      })
+      continue
+    }
+    const parts = extractAssistantParts(row)
+    if (!parts.length) continue
     out.push({
       id: row.id,
       role,
-      text,
+      text: extractMessageText(row, parts),
+      parts,
       createdAt: Number(row.time?.created || 0),
     })
   }
   return out
+}
+
+export async function startSessionPrompt(
+  id: string,
+  textInput: string,
+): Promise<{ messages: SessionMessage[]; session: RecentSession | null }> {
+  const service = requireService()
+  if (!id) throw new Error("id requis")
+  const text = textInput.trim()
+  if (!text) throw new Error("Message vide")
+
+  const prompt = await fetchOpencodeJson(
+    `${service.url}/api/session/${encodeURIComponent(id)}/prompt`,
+    {
+      method: "POST",
+      headers: {
+        ...authHeaders(service.password),
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    },
+    30000,
+  )
+  if (!prompt.ok) {
+    const err =
+      prompt.data &&
+      typeof prompt.data === "object" &&
+      "message" in prompt.data &&
+      typeof (prompt.data as { message?: unknown }).message === "string"
+        ? (prompt.data as { message: string }).message
+        : "Impossible d'envoyer le message"
+    throw new Error(err)
+  }
+
+  // Do not wait — the chat UI streams tokens via /api/events.
+  return {
+    session: await getSession(id),
+    messages: await listSessionMessages(id),
+  }
+}
+
+/** Block until the session agent loop is idle (OpenCode `/wait`). */
+export async function waitSession(id: string): Promise<void> {
+  const service = requireService()
+  if (!id) throw new Error("id requis")
+  const result = await fetchOpencodeJson(
+    `${service.url}/api/session/${encodeURIComponent(id)}/wait`,
+    {
+      method: "POST",
+      headers: authHeaders(service.password),
+    },
+    600_000,
+  )
+  // 204 No Content is the success response for wait.
+  if (!result.ok && result.status !== 204) {
+    throw new Error("Impossible d'attendre la fin de la génération")
+  }
+}
+
+/** Interrupt the current agent turn for a session. */
+export async function interruptSession(id: string): Promise<void> {
+  const service = requireService()
+  if (!id) throw new Error("id requis")
+  const result = await fetchOpencodeJson(
+    `${service.url}/api/session/${encodeURIComponent(id)}/interrupt`,
+    {
+      method: "POST",
+      headers: authHeaders(service.password),
+    },
+    15000,
+  )
+  if (!result.ok && result.status !== 204) {
+    throw new Error("Impossible d'interrompre la génération")
+  }
 }

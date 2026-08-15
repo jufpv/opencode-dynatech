@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
+import * as events from "../services/events.ts"
 import * as localFiles from "../services/local-files.ts"
 import * as mcps from "../services/mcps.ts"
 import * as projects from "../services/projects.ts"
@@ -40,6 +41,12 @@ export async function handleConfigApi(
   try {
     if (pathname === "/api/status" && method === "GET") {
       sendJson(res, 200, await status.getStatus(options.cronApiUrl))
+      return true
+    }
+
+    if (pathname === "/api/events" && method === "GET") {
+      const session = (url.searchParams.get("session") || "").trim() || null
+      await events.proxyOpencodeEventStream(req, res, session)
       return true
     }
 
@@ -104,6 +111,37 @@ export async function handleConfigApi(
           session: await sessions.getSession(id),
           messages: await sessions.listSessionMessages(id),
         })
+        return true
+      }
+      if (messagesMatch && method === "POST") {
+        const id = decodeURIComponent(messagesMatch[1]!)
+        const body = (await readJson(req)) as { text?: string }
+        if (!body.text || typeof body.text !== "string") {
+          sendJson(res, 400, { error: "text requis" })
+          return true
+        }
+        const result = await sessions.startSessionPrompt(id, body.text)
+        sendJson(res, 200, { ok: true, ...result })
+        return true
+      }
+
+      const waitMatch = pathname.match(/^\/api\/sessions\/([^/]+)\/wait$/)
+      if (waitMatch && method === "POST") {
+        const id = decodeURIComponent(waitMatch[1]!)
+        await sessions.waitSession(id)
+        sendJson(res, 200, {
+          ok: true,
+          session: await sessions.getSession(id),
+          messages: await sessions.listSessionMessages(id),
+        })
+        return true
+      }
+
+      const interruptMatch = pathname.match(/^\/api\/sessions\/([^/]+)\/interrupt$/)
+      if (interruptMatch && method === "POST") {
+        const id = decodeURIComponent(interruptMatch[1]!)
+        await sessions.interruptSession(id)
+        sendJson(res, 200, { ok: true })
         return true
       }
       const sessionMatch = pathname.match(/^\/api\/sessions\/([^/]+)$/)

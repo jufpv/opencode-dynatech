@@ -4,6 +4,8 @@ import { networkInterfaces } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { handleConfigApi } from "./api/router.ts"
+import { startHttpPortProxy } from "./lib/http-port-proxy.ts"
+import { startMdnsAdvertisement } from "./lib/mdns.ts"
 import type { WebuiModule } from "./module.ts"
 
 /** Bind all interfaces so LAN devices (e.g. iPhone) can reach the UI. */
@@ -116,7 +118,16 @@ export async function startWebuiServer(options: {
   port: number
   cronApiUrl: string
   modules: readonly WebuiModule[]
-}): Promise<{ server: Server; url: string; lanUrls: string[] }> {
+  mdnsHost?: string
+  /** Try to reverse-proxy this port (default 80) so alfred.local needs no :port. */
+  mdnsPublicPort?: number
+}): Promise<{
+  server: Server
+  url: string
+  lanUrls: string[]
+  mdnsUrl?: string
+  stopExtras?: () => Promise<void>
+}> {
   const { port, cronApiUrl, modules } = options
 
   const server = createServer(async (req, res) => {
@@ -167,9 +178,53 @@ export async function startWebuiServer(options: {
     server.listen(port, LISTEN_HOST, () => resolve())
   })
 
+  let mdnsUrl: string | undefined
+  let stopMdns: (() => void) | undefined
+  let stopProxy: (() => Promise<void>) | undefined
+
+  const mdnsName = (options.mdnsHost || "").trim()
+  const publicPort =
+    typeof options.mdnsPublicPort === "number" && options.mdnsPublicPort > 0
+      ? Math.floor(options.mdnsPublicPort)
+      : 80
+
+  let advertisedPort = port
+  if (mdnsName && publicPort !== port) {
+    const proxy = await startHttpPortProxy({
+      listenPort: publicPort,
+      targetPort: port,
+      listenHost: LISTEN_HOST,
+    })
+    if (proxy) {
+      advertisedPort = publicPort
+      stopProxy = proxy.stop
+      console.log(
+        `[opencode-webui] Proxy :${publicPort} → :${port} (URL sans port)`,
+      )
+    }
+  }
+
+  if (mdnsName) {
+    const mdns = startMdnsAdvertisement({
+      hostname: mdnsName,
+      port: advertisedPort,
+      serviceName: "Alfred WebUI",
+    })
+    if (mdns) {
+      mdnsUrl = mdns.url
+      stopMdns = mdns.stop
+      console.log(`[opencode-webui] mDNS: ${mdns.url}/`)
+    }
+  }
+
   return {
     server,
     url: `http://127.0.0.1:${port}`,
     lanUrls: lanUrls(port),
+    mdnsUrl,
+    stopExtras: async () => {
+      stopMdns?.()
+      await stopProxy?.()
+    },
   }
 }

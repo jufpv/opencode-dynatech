@@ -1,13 +1,15 @@
 import { getProjectsPayload } from "../services/projects.ts"
 
 export type NavId = "skills" | "tools" | "mcps"
-export type RailId = "chat" | "documents" | "cron"
+export type RailId = "home" | "chat" | "documents" | "cron"
 
 const ITEMS: Array<{ id: NavId; href: string; label: string }> = [
   { id: "skills", href: "/skills", label: "Skills" },
   { id: "tools", href: "/tools", label: "Tools" },
   { id: "mcps", href: "/mcps", label: "MCP" },
 ]
+
+const ICON_HOME = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4.5v-6h3V21H18a1 1 0 0 0 1-1V9.5"/></svg>`
 
 const ICON_CHAT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`
 
@@ -34,15 +36,13 @@ export function renderNav(active: NavId | null): string {
 </nav>`
 }
 
-function renderLogo(): string {
-  return `<a class="app-logo" href="/" title="Accueil" aria-label="Accueil DynaTech">
-  <img src="/logo.png" alt="DynaTech" width="40" height="40" decoding="async">
-</a>`
-}
-
 export function renderRail(active: RailId | null): string {
   return `<aside class="app-rail" aria-label="Navigation principale">
   <nav class="app-rail-nav">
+    <a class="app-rail-btn${active === "home" ? " active" : ""}" href="/" title="Accueil" aria-label="Accueil" data-rail="home">
+      ${ICON_HOME}
+    </a>
+    <span class="app-rail-sep" aria-hidden="true"></span>
     <a class="app-rail-btn${active === "chat" ? " active" : ""}" href="/chat" title="Chat" aria-label="Chat" data-rail="chat">
       ${ICON_CHAT}
     </a>
@@ -201,7 +201,7 @@ export interface ShellOptions {
   shellClass?: string
 }
 
-/** Wrap page content; top bar (logo + project + horizontal rail) + centered box. */
+/** Wrap page content; top bar (project + horizontal rail) + centered box. */
 export function renderShell(
   active: NavId | null,
   innerHtml: string,
@@ -216,7 +216,6 @@ export function renderShell(
   return `<div class="shell${shellExtra}">
   <div class="shell-cluster">
     <div class="shell-top-row">
-      ${renderLogo()}
       ${renderProjectBar()}
       ${renderRail(railActive)}
     </div>
@@ -237,6 +236,8 @@ export const NAV_CSS = `
 .shell {
   --content-max: 720px;
   --rail-size: 2.5rem;
+  /* Même courbure que les extrémités de la bulle de navigation */
+  --shell-radius: calc(var(--rail-size) / 2);
   --rail-gap: 0.55rem;
   --shell-pad: 0.5rem;
   --cluster-gap: 0.55rem;
@@ -290,21 +291,6 @@ export const NAV_CSS = `
   width: 100%;
   min-width: 0;
 }
-.app-logo {
-  flex: 0 0 var(--rail-size);
-  width: var(--rail-size);
-  height: var(--rail-size);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-}
-.app-logo img {
-  display: block;
-  width: var(--rail-size);
-  height: var(--rail-size);
-  object-fit: contain;
-}
 .shell-topbar {
   display: flex;
   align-items: center;
@@ -313,7 +299,7 @@ export const NAV_CSS = `
   max-width: var(--content-max);
   width: 100%;
   min-height: var(--rail-size);
-  padding: 0;
+  padding: 0 0 0 0.45rem;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -431,7 +417,7 @@ export const NAV_CSS = `
   color: var(--text-muted);
   font-size: 0.875rem;
 }
-/* Menu principal : horizontal, à droite de la barre projet */
+/* Menu principal : une bulle ovale (liquid glass) à droite de la barre projet */
 .app-rail {
   flex: 0 0 auto;
   margin-left: auto;
@@ -445,39 +431,76 @@ export const NAV_CSS = `
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.05rem;
+  height: var(--rail-size);
+  padding: 0.18rem;
+  box-sizing: border-box;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-strong, var(--border)) 65%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow:
+    var(--shadow, 0 1px 2px rgba(0, 0, 0, 0.04)),
+    inset 0 1px 0 color-mix(in srgb, var(--bg-elevated) 35%, #fff 65%),
+    inset 0 -0.5px 0 color-mix(in srgb, var(--text) 8%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] .app-rail-nav {
+    background: color-mix(in srgb, var(--bg-elevated) 55%, transparent);
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+}
+:root[data-theme="dark"] .app-rail-nav {
+  background: color-mix(in srgb, var(--bg-elevated) 55%, transparent);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 .app-rail-btn {
   box-sizing: border-box;
-  width: var(--rail-size);
-  height: var(--rail-size);
+  width: calc(var(--rail-size) - 0.36rem);
+  height: calc(var(--rail-size) - 0.36rem);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-elevated);
+  border: none;
+  border-radius: 999px;
+  background: transparent;
   color: var(--text-muted);
   text-decoration: none;
   cursor: pointer;
   padding: 0;
   font: inherit;
-  box-shadow: var(--shadow, 0 1px 2px rgba(0,0,0,.04));
-  transition: background .15s, color .15s, border-color .15s;
+  box-shadow: none;
+  transition: background .15s, color .15s, transform .12s;
 }
 .app-rail-btn svg {
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 1.12rem;
+  height: 1.12rem;
   display: block;
 }
 .app-rail-btn:hover {
   color: var(--text);
-  background: var(--bg-muted);
+  background: color-mix(in srgb, var(--bg-muted) 88%, transparent);
 }
 .app-rail-btn.active {
   color: var(--text);
-  background: var(--bg-muted);
-  border-color: var(--border-strong, var(--border));
+  background: color-mix(in srgb, var(--bg-muted) 92%, var(--text) 5%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 70%, transparent);
+}
+.app-rail-btn:active {
+  transform: scale(0.96);
+}
+.app-rail-sep {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 1rem;
+  margin: 0 0.12rem;
+  background: color-mix(in srgb, var(--border-strong, var(--border)) 80%, transparent);
+  opacity: 0.7;
 }
 .shell-stack {
   flex: 1 1 auto;
@@ -526,7 +549,7 @@ export const NAV_CSS = `
   width: 100%;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--shell-radius);
   box-shadow: none;
   overflow: clip;
 }

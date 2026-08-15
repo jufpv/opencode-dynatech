@@ -3,9 +3,15 @@ export interface PluginWebuiOptions {
   uiPort?: number
   /** Base URL of the cron JSON API. Default http://127.0.0.1:8788 */
   cronApiUrl?: string
+  /**
+   * mDNS / Bonjour hostname without `.local` (e.g. `alfred` → http://alfred.local:9877/).
+   * Empty string disables. Default `alfred`.
+   */
+  mdnsHost?: string
 }
 
 export const DEFAULT_UI_PORT = 9877
+export const DEFAULT_MDNS_HOST = "alfred"
 
 export function parseOptions(raw: unknown): Required<PluginWebuiOptions> {
   const options = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
@@ -20,5 +26,12 @@ export function parseOptions(raw: unknown): Required<PluginWebuiOptions> {
       ? options.cronApiUrl.trim().replace(/\/$/, "")
       : "http://127.0.0.1:8788"
 
-  return { uiPort, cronApiUrl }
+  let mdnsHost = DEFAULT_MDNS_HOST
+  if (typeof options.mdnsHost === "string") {
+    mdnsHost = options.mdnsHost.trim().replace(/\.local$/i, "")
+  } else if (options.mdnsHost === false || options.mdnsHost === null) {
+    mdnsHost = ""
+  }
+
+  return { uiPort, cronApiUrl, mdnsHost }
 }

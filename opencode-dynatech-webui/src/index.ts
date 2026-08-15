@@ -52,7 +52,15 @@ export default Plugin.define({
   id: "dynatech.opencode-webui",
   setup: async (ctx) => {
     const options = parseOptions(ctx.options)
-    let ui: { server: Server; url: string } | undefined
+    let ui:
+      | {
+          server: Server
+          url: string
+          lanUrls: string[]
+          mdnsUrl?: string
+          stopExtras?: () => Promise<void>
+        }
+      | undefined
 
     const customTools = await loadCustomToolDefs()
     await ctx.tool.transform((tools) => {
@@ -64,6 +72,7 @@ export default Plugin.define({
         ui = await startWebuiServer({
           port: options.uiPort,
           cronApiUrl: options.cronApiUrl,
+          mdnsHost: options.mdnsHost,
           modules: [
             createHomeModule(),
             createChatModule(),
@@ -84,7 +93,7 @@ export default Plugin.define({
       }
     }
 
-    const uiUrl = ui?.url ?? `http://127.0.0.1:${options.uiPort || 9877}`
+    const uiUrl = ui?.mdnsUrl || ui?.url || `http://127.0.0.1:${options.uiPort || 9877}`
     const baseUrl = uiUrl.replace(/\/$/, "")
     const homeUrl = `${baseUrl}/`
     const cronUrl = `${baseUrl}/cron`
@@ -113,6 +122,7 @@ export default Plugin.define({
     })
 
     return async () => {
+      await ui?.stopExtras?.()
       if (ui) {
         await new Promise<void>((resolve) => ui?.server.close(() => resolve()))
       }
