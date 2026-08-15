@@ -69,6 +69,13 @@ export function renderLiteMarkdown(src: string): string {
       i += 1
       continue
     }
+    const heading = trimmed.match(/^(#{1,6})\s+(.+)$/)
+    if (heading) {
+      const level = heading[1]!.length
+      out.push(`<h${level}>${heading[2]}</h${level}>`)
+      i += 1
+      continue
+    }
     if (/^\d+\.\s+/.test(lines[i]!)) {
       out.push("<ol>")
       while (i < lines.length && /^\d+\.\s+/.test(lines[i]!)) {
@@ -91,6 +98,7 @@ export function renderLiteMarkdown(src: string): string {
     while (
       i < lines.length &&
       lines[i]!.trim() &&
+      !/^#{1,6}\s+/.test(lines[i]!.trim()) &&
       !/^\d+\.\s+/.test(lines[i]!) &&
       !/^[-*]\s+/.test(lines[i]!)
     ) {
@@ -156,6 +164,13 @@ function renderMarkdown(src) {
       i += 1;
       continue;
     }
+    var heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      var level = heading[1].length;
+      out.push("<h" + level + ">" + heading[2] + "</h" + level + ">");
+      i += 1;
+      continue;
+    }
     if (/^\d+\.\s+/.test(lines[i])) {
       out.push("<ol>");
       while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
@@ -178,6 +193,7 @@ function renderMarkdown(src) {
     while (
       i < lines.length &&
       lines[i].trim() &&
+      !/^#{1,6}\s+/.test(lines[i].trim()) &&
       !/^\d+\.\s+/.test(lines[i]) &&
       !/^[-*]\s+/.test(lines[i])
     ) {

@@ -12,17 +12,23 @@ export function renderDocumentsPage(theme: UiTheme): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="color-scheme" content="${colorScheme}">
   <title>Documents · OpenCode</title>
-  <style>${BASE_CSS}${NAV_CSS}${fontOverrides}</style>
+  <style>${BASE_CSS}${NAV_CSS}${DOCS_CSS}${fontOverrides}</style>
 </head>
 <body>
   ${renderShell(
     null,
     `
-    <section class="panel">
-      <div class="page-placeholder">
-        <h2>Documents</h2>
-        <p>Contenu à venir.</p>
-      </div>
+    <section class="panel" aria-labelledby="docs-title">
+      <header class="page-chrome">
+        <div class="entity-list-header">
+          <div>
+            <h2 id="docs-title">Documents</h2>
+          </div>
+          <button type="button" class="entity-add-btn" id="docs-import-btn" disabled title="Bientôt disponible">Importer</button>
+        </div>
+        <div class="page-sep" role="separator" aria-hidden="true"></div>
+      </header>
+      <p class="docs-empty">Contenu à venir.</p>
     </section>
   `,
     "documents",
@@ -37,6 +43,14 @@ const BASE_CSS = `
 :root[data-theme="dark"]{color-scheme:dark;--bg:#111113;--bg-elevated:#18181b;--bg-muted:#1c1c1f;--bg-hover:#27272a;--border:#27272a;--border-strong:#3f3f46;--text:#fafafa;--text-muted:#a1a1aa;--text-faint:#71717a;--accent:#60a5fa;--ok:#4ade80;--ok-bg:#14532d;--ok-fg:#bbf7d0;--err:#f87171;--err-bg:#3f1d1d;--err-border:#7f1d1d;--primary:#fafafa;--primary-hover:#e4e4e7;--primary-fg:#18181b;--toggle-off:rgba(120,120,128,.32);--shadow:none}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font);font-size:var(--font-size);background:var(--bg);color:var(--text);min-height:100dvh;-webkit-font-smoothing:antialiased}
-.page-placeholder h2{font-size:1.125rem;font-weight:600;letter-spacing:-.01em;margin-bottom:.35rem}
-.page-placeholder p{font-size:.875rem;color:var(--text-muted);line-height:1.5}
+`
+
+const DOCS_CSS = `
+.docs-empty {
+  margin: 0;
+  padding: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
 `

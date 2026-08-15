@@ -5,7 +5,11 @@ import { NAV_CSS, renderShell } from "../../shell/nav.ts"
 
 const ICON_ATTACH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.88 18.09a2 2 0 0 1-2.83-2.83l8.49-8.49"/></svg>`
 
+const ICON_CHAT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`
+
 const ICON_CHEVRON = `<svg class="session-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>`
+
+const ICON_LIST_CHEVRON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>`
 
 const ICON_CHIP_CHEVRON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>`
 
@@ -57,39 +61,54 @@ export function renderChatPage(theme: UiTheme): string {
   ${renderShell(
     null,
     `
-    <div class="chat-root">
-      <header class="chat-toolbar">
-        ${sessionPickerHtml()}
-        <div class="chat-toolbar-right">
-          ${modelEffortHtml()}
-          <div class="context-wheel" id="context-wheel" title="Utilisation du contexte" aria-label="Utilisation du contexte" hidden>
-            <svg viewBox="0 0 36 36" aria-hidden="true">
-              <circle class="context-wheel-track" cx="18" cy="18" r="14"></circle>
-              <circle class="context-wheel-fill" id="context-wheel-fill" cx="18" cy="18" r="14"></circle>
-            </svg>
+    <div class="chat-page is-list" id="chat-page">
+      <section class="chat-list panel" id="chat-list" aria-labelledby="chat-list-title">
+        <header class="page-chrome">
+          <div class="entity-list-header">
+            <div>
+              <h2 id="chat-list-title">Discussions</h2>
+            </div>
+            <button type="button" class="entity-add-btn" id="chat-list-new">Nouvelle</button>
           </div>
+          <div class="page-sep" role="separator" aria-hidden="true"></div>
+        </header>
+        <div class="recent-list" id="chat-list-items" aria-live="polite"></div>
+        <p class="recent-empty hidden" id="chat-list-empty">Aucune discussion pour ce projet.</p>
+      </section>
+
+      <div class="chat-root" id="chat-root" hidden>
+        <header class="chat-toolbar">
+          ${sessionPickerHtml()}
+          <div class="chat-toolbar-right">
+            ${modelEffortHtml()}
+            <div class="context-wheel" id="context-wheel" title="Utilisation du contexte" aria-label="Utilisation du contexte" hidden>
+              <svg viewBox="0 0 36 36" aria-hidden="true">
+                <circle class="context-wheel-track" cx="18" cy="18" r="14"></circle>
+                <circle class="context-wheel-fill" id="context-wheel-fill" cx="18" cy="18" r="14"></circle>
+              </svg>
+            </div>
+          </div>
+        </header>
+
+        <div class="chat-messages" id="chat-messages" aria-live="polite">
+          <p class="chat-empty" id="chat-empty">Sélectionnez ou créez une discussion.</p>
         </div>
-      </header>
 
-      <div class="chat-messages" id="chat-messages" aria-live="polite">
-        <p class="chat-empty" id="chat-empty">Sélectionnez ou créez une discussion.</p>
-      </div>
+        <div class="chat-bottom">
+          <div class="chat-interrupted" id="chat-interrupted" hidden role="status" aria-live="polite">
+            <span>Interrompu</span>
+          </div>
 
-      <div class="chat-bottom">
-        <div class="chat-interrupted" id="chat-interrupted" hidden role="status" aria-live="polite">
-          <span>Interrompu</span>
+          <form class="chat-composer" id="chat-composer" autocomplete="off">
+            <button type="button" class="chat-attach-btn" title="Joindre une image ou un document" aria-label="Joindre un fichier">${ICON_ATTACH}</button>
+            <textarea class="chat-composer-input" id="chat-input" rows="1" placeholder="Demandez n'importe quoi..."></textarea>
+            <button type="submit" class="chat-send" title="Envoyer" aria-label="Envoyer">${ICON_SEND}</button>
+          </form>
         </div>
-
-        <form class="chat-composer" id="chat-composer" autocomplete="off">
-          <button type="button" class="chat-attach-btn" title="Joindre une image ou un document" aria-label="Joindre un fichier">${ICON_ATTACH}</button>
-          <textarea class="chat-composer-input" id="chat-input" rows="1" placeholder="Demandez n'importe quoi..."></textarea>
-          <button type="submit" class="chat-send" title="Envoyer" aria-label="Envoyer">${ICON_SEND}</button>
-        </form>
       </div>
     </div>
   `,
     "chat",
-    { shellClass: "is-chat" },
   )}
   <script>${CHAT_JS}</script>
 </body>
@@ -98,6 +117,15 @@ export function renderChatPage(theme: UiTheme): string {
 
 const CHAT_JS = `
 (function () {
+  const ICON_CHAT = ${JSON.stringify(ICON_CHAT)};
+  const ICON_LIST_CHEVRON = ${JSON.stringify(ICON_LIST_CHEVRON)};
+  const shellEl = document.querySelector(".shell");
+  const chatPage = document.getElementById("chat-page");
+  const listView = document.getElementById("chat-list");
+  const listItems = document.getElementById("chat-list-items");
+  const listEmpty = document.getElementById("chat-list-empty");
+  const listNew = document.getElementById("chat-list-new");
+  const roomView = document.getElementById("chat-root");
   const picker = document.getElementById("session-picker");
   const trigger = document.getElementById("session-trigger");
   const menu = document.getElementById("session-menu");
@@ -110,7 +138,7 @@ const CHAT_JS = `
   const contextWheelFill = document.getElementById("context-wheel-fill");
   const form = document.getElementById("chat-composer");
   const input = document.getElementById("chat-input");
-  if (!picker || !trigger || !menu || !nameEl || !list || !messagesEl) return;
+  if (!chatPage || !listView || !listItems || !roomView || !picker || !trigger || !menu || !nameEl || !list || !messagesEl) return;
 
   let sessions = [];
   let currentId = "";
@@ -173,6 +201,48 @@ const CHAT_JS = `
       );
     }).join("");
     if (emptyEl) emptyEl.classList.toggle("hidden", sessions.length > 0);
+  }
+
+  function renderSessionList() {
+    listItems.innerHTML = sessions.map((s) => {
+      const id = s.id || "";
+      const href = "/chat?session=" + encodeURIComponent(id);
+      return (
+        '<div class="recent-item" data-id="' + escapeHtml(id) + '">' +
+          '<a class="recent-link" href="' + escapeHtml(href) + '">' +
+            '<span class="recent-icon" aria-hidden="true">' + ICON_CHAT + "</span>" +
+            '<span class="recent-session">' + escapeHtml(s.title || "Session") + "</span>" +
+            '<span class="recent-chevron" aria-hidden="true">' + ICON_LIST_CHEVRON + "</span>" +
+          "</a>" +
+          '<button type="button" class="recent-close" data-close="' + escapeHtml(id) + '" aria-label="Supprimer la discussion" title="Supprimer">×</button>' +
+        "</div>"
+      );
+    }).join("");
+    if (listEmpty) listEmpty.classList.toggle("hidden", sessions.length > 0);
+  }
+
+  function showListMode(opts) {
+    const options = opts || {};
+    currentId = "";
+    setInterrupted(false);
+    setOpen(false);
+    listView.hidden = false;
+    roomView.hidden = true;
+    chatPage.classList.remove("is-room");
+    chatPage.classList.add("is-list");
+    document.documentElement.classList.remove("is-chat-room");
+    if (shellEl) shellEl.classList.remove("is-chat");
+    if (!options.skipUrl) setUrlSession("");
+    renderSessionList();
+  }
+
+  function showRoomMode() {
+    listView.hidden = true;
+    roomView.hidden = false;
+    chatPage.classList.remove("is-list");
+    chatPage.classList.add("is-room");
+    document.documentElement.classList.add("is-chat-room");
+    if (shellEl) shellEl.classList.add("is-chat");
   }
 
   function toolLabel(name) {
@@ -758,11 +828,19 @@ const CHAT_JS = `
 
   async function selectSession(id, name, opts) {
     const options = opts || {};
-    currentId = id || "";
+    if (!id) {
+      showListMode({ skipUrl: options.skipUrl });
+      nameEl.textContent = name || "Discussions";
+      renderList();
+      return;
+    }
+    showRoomMode();
+    currentId = id;
     setInterrupted(false);
-    nameEl.textContent = name || (id ? "Session" : "Aucune discussion");
+    nameEl.textContent = name || "Session";
     if (!options.skipUrl) setUrlSession(currentId);
     renderList();
+    renderSessionList();
     if (!options.skipMessages) await loadMessages(currentId);
   }
 
@@ -776,18 +854,24 @@ const CHAT_JS = `
         id: s.id,
         title: s.title || "Session",
       })) : [];
-      const want = preferredId || querySessionId();
-      const match = sessions.find((s) => s.id === want) || sessions[0] || null;
+      const want = preferredId === undefined ? querySessionId() : String(preferredId || "");
+      const match = want ? sessions.find((s) => s.id === want) || null : null;
       if (match) {
         await selectSession(match.id, match.title, { skipUrl: false });
       } else {
-        await selectSession("", "Aucune discussion");
+        showListMode({ skipUrl: !want });
+        nameEl.textContent = "Discussions";
+        renderList();
       }
     } catch (err) {
       sessions = [];
       renderList();
-      await selectSession("", "Erreur");
-      messagesEl.innerHTML = '<p class="chat-empty">' + escapeHtml(err instanceof Error ? err.message : "Impossible de charger les discussions") + "</p>";
+      showListMode({ skipUrl: true });
+      listItems.innerHTML = "";
+      if (listEmpty) {
+        listEmpty.textContent = err instanceof Error ? err.message : "Impossible de charger les discussions";
+        listEmpty.classList.remove("hidden");
+      }
     }
   }
 
@@ -809,6 +893,63 @@ const CHAT_JS = `
     loadSessions("");
   });
 
+  if (listNew) {
+    listNew.addEventListener("click", async () => {
+      listNew.disabled = true;
+      try {
+        const res = await fetch("/api/sessions", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+        const session = data.session;
+        if (!session || !session.id) throw new Error("Session invalide");
+        sessions = [{ id: session.id, title: session.title || "Nouvelle session" }].concat(
+          sessions.filter((s) => s.id !== session.id),
+        );
+        await selectSession(session.id, session.title || "Nouvelle session");
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Impossible de créer la discussion");
+      } finally {
+        listNew.disabled = false;
+      }
+    });
+  }
+
+  listItems.addEventListener("click", async (ev) => {
+    const close = ev.target.closest(".recent-close");
+    if (!close) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const id = close.getAttribute("data-close") || "";
+    if (!id) return;
+    close.disabled = true;
+    try {
+      const res = await fetch("/api/sessions/" + encodeURIComponent(id), { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+      sessions = sessions.filter((s) => s.id !== id);
+      renderSessionList();
+      renderList();
+    } catch (err) {
+      close.disabled = false;
+      alert(err instanceof Error ? err.message : "Impossible de supprimer la discussion");
+    }
+  });
+
+  window.addEventListener("popstate", () => {
+    const id = querySessionId();
+    if (!id) {
+      showListMode({ skipUrl: true });
+      return;
+    }
+    const match = sessions.find((s) => s.id === id);
+    if (match) void selectSession(match.id, match.title, { skipUrl: true });
+    else void loadSessions(id);
+  });
+
   menu.addEventListener("click", async (ev) => {
     const close = ev.target.closest(".session-close");
     if (close) {
@@ -822,11 +963,10 @@ const CHAT_JS = `
         if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
         sessions = sessions.filter((s) => s.id !== id);
         if (currentId === id) {
-          const next = sessions[0] || null;
-          if (next) await selectSession(next.id, next.title);
-          else await selectSession("", "Aucune discussion");
+          await selectSession("", "Discussions");
         } else {
           renderList();
+          renderSessionList();
         }
       } catch (err) {
         alert(err instanceof Error ? err.message : "Impossible de supprimer la discussion");
@@ -1028,11 +1168,139 @@ const BASE_CSS = `
 @media (prefers-color-scheme:dark){:root[data-theme="system"]{color-scheme:dark;--bg:#111113;--bg-elevated:#18181b;--bg-muted:#1c1c1f;--bg-hover:#27272a;--border:#27272a;--border-strong:#3f3f46;--text:#fafafa;--text-muted:#a1a1aa;--text-faint:#71717a;--accent:#60a5fa;--ok:#4ade80;--ok-bg:#14532d;--ok-fg:#bbf7d0;--err:#f87171;--err-bg:#3f1d1d;--err-border:#7f1d1d;--primary:#fafafa;--primary-hover:#e4e4e7;--primary-fg:#18181b;--toggle-off:rgba(120,120,128,.32);--shadow:none}}
 :root[data-theme="dark"]{color-scheme:dark;--bg:#111113;--bg-elevated:#18181b;--bg-muted:#1c1c1f;--bg-hover:#27272a;--border:#27272a;--border-strong:#3f3f46;--text:#fafafa;--text-muted:#a1a1aa;--text-faint:#71717a;--accent:#60a5fa;--ok:#4ade80;--ok-bg:#14532d;--ok-fg:#bbf7d0;--err:#f87171;--err-bg:#3f1d1d;--err-border:#7f1d1d;--primary:#fafafa;--primary-hover:#e4e4e7;--primary-fg:#18181b;--toggle-off:rgba(120,120,128,.32);--shadow:none}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden}
+html,body{min-height:100%}
+html.is-chat-room,html.is-chat-room body{height:100%;overflow:hidden}
 body{font-family:var(--font);font-size:var(--font-size);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
 `
 
 const CHAT_CSS = `
+.chat-page.is-list {
+  display: block;
+  height: auto;
+  overflow: visible;
+  background: transparent;
+}
+.chat-page.is-room {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-elevated);
+}
+.chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.chat-list[hidden],
+.chat-root[hidden] {
+  display: none !important;
+}
+.entity-add-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.15rem 0.2rem 0.15rem 0.35rem;
+  margin: 0 -0.3rem;
+  border-radius: 6px;
+  background: transparent;
+  transition: background .15s;
+}
+.recent-item:hover {
+  background: var(--bg-muted);
+}
+.recent-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.25rem 0.15rem;
+  color: inherit;
+  text-decoration: none;
+}
+.recent-icon {
+  flex: 0 0 auto;
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--text-muted);
+  display: inline-flex;
+  opacity: 0.9;
+}
+.recent-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.recent-session {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-chevron {
+  flex: 0 0 auto;
+  width: 0.85rem;
+  height: 0.85rem;
+  color: var(--text-faint);
+  display: inline-flex;
+}
+.recent-chevron svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.recent-close {
+  flex: 0 0 auto;
+  width: 1.45rem;
+  height: 1.45rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-faint);
+  font: inherit;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity .15s, color .15s, background .15s;
+}
+.recent-item:hover .recent-close {
+  opacity: 1;
+}
+.recent-close:hover {
+  color: var(--err);
+  background: var(--err-bg);
+}
+.recent-empty {
+  margin: 0;
+  padding: 0.55rem 0.15rem;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+.recent-empty.hidden {
+  display: none;
+}
 .chat-root {
   position: relative;
   flex: 1 1 auto;

@@ -339,6 +339,7 @@ export const NAV_CSS = `
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 20px;
 }
 .project-chevron {
   flex-shrink: 0;
@@ -487,9 +488,9 @@ export const NAV_CSS = `
   background: color-mix(in srgb, var(--bg-muted) 88%, transparent);
 }
 .app-rail-btn.active {
-  color: var(--text);
-  background: color-mix(in srgb, var(--bg-muted) 92%, var(--text) 5%);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 70%, transparent);
+  color: var(--primary-fg);
+  background: var(--primary);
+  box-shadow: none;
 }
 .app-rail-btn:active {
   transform: scale(0.96);
@@ -561,10 +562,60 @@ export const NAV_CSS = `
   width: 100%;
   min-height: 0;
 }
-/* Même marge latérale pour Cron / Skills / Tools / MCP */
-.shell-box .panel,
-.shell-box .tasks-panel {
+/* Même marge latérale pour les pages listes */
+.shell-box .panel {
   padding: 0.85rem 0.75rem 1rem;
+}
+/* En-tête partagé Accueil / Discussions / Documents / Cron */
+.page-chrome .entity-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+}
+.page-chrome .entity-list-header > div:first-child {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+.page-chrome .entity-list-header h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.page-sep {
+  width: 100%;
+  height: 1px;
+  margin: 0.75rem 0;
+  background: var(--border);
+}
+.entity-add-btn {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 0.45rem 0.95rem;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  background: var(--primary);
+  color: var(--primary-fg);
+  border: 1px solid var(--primary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s, opacity 0.15s;
+}
+.entity-add-btn:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+.entity-add-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.entity-add-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 /* Chat : colonne centrée, viewport figé — seuls les messages scrollent */
 .shell.is-chat {

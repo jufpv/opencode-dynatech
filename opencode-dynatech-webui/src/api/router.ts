@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http"
 import * as events from "../services/events.ts"
 import * as localFiles from "../services/local-files.ts"
 import * as mcps from "../services/mcps.ts"
+import * as projectReadme from "../services/project-readme.ts"
 import * as projects from "../services/projects.ts"
 import * as sessions from "../services/sessions.ts"
 import * as skills from "../services/skills.ts"
@@ -186,6 +187,21 @@ export async function handleConfigApi(
       }
       const current = projects.setCurrentProject(body.id)
       sendJson(res, 200, { ok: true, current, ...projects.getProjectsPayload() })
+      return true
+    }
+
+    if (pathname === "/api/project/readme" && method === "GET") {
+      sendJson(res, 200, projectReadme.getProjectReadme())
+      return true
+    }
+
+    if (pathname === "/api/project/readme" && (method === "PUT" || method === "POST")) {
+      const body = (await readJson(req)) as { content?: unknown }
+      if (typeof body.content !== "string") {
+        sendJson(res, 400, { error: "content requis" })
+        return true
+      }
+      sendJson(res, 200, { ok: true, ...projectReadme.saveProjectReadme(body.content) })
       return true
     }
 

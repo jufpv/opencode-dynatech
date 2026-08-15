@@ -21,16 +21,19 @@ export function renderUiPage(timezone: string, theme: UiTheme): string {
     null,
     `
     <div class="view view-tasks" id="view-tasks">
-      <section class="tasks-panel" aria-labelledby="tasks-title">
-        <div class="entity-list-header">
-          <div>
-            <div class="tasks-header">
+      <section class="panel" aria-labelledby="tasks-title">
+        <header class="page-chrome">
+          <div class="entity-list-header">
+            <div>
               <h2 id="tasks-title">Tâches planifiées</h2>
-              <p>Composez une planification champ par champ (minute, heure, jour, mois, semaine) ou en expression cron avancée.</p>
-              <p class="tasks-directory" id="tasks-directory"></p>
             </div>
+            <button type="button" class="entity-add-btn" id="tasks-add-btn">Ajouter</button>
           </div>
-          <button type="button" class="entity-add-btn" id="tasks-add-btn">Ajouter</button>
+          <div class="page-sep" role="separator" aria-hidden="true"></div>
+        </header>
+        <div class="tasks-header">
+          <p>Composez une planification champ par champ (minute, heure, jour, mois, semaine) ou en expression cron avancée.</p>
+          <p class="tasks-directory" id="tasks-directory"></p>
         </div>
 
         <div class="tasks-error hidden" id="tasks-error"></div>
@@ -43,7 +46,7 @@ export function renderUiPage(timezone: string, theme: UiTheme): string {
     </div>
 
     <div class="view view-task-editor hidden" id="view-task-editor">
-      <section class="tasks-panel" aria-labelledby="task-editor-title">
+      <section class="panel" aria-labelledby="task-editor-title">
         <div class="entity-editor-header">
           <button type="button" class="entity-editor-back" id="task-editor-back">← Retour</button>
           <h2 id="task-editor-title">Nouvelle tâche</h2>
@@ -65,6 +68,9 @@ export function renderUiPage(timezone: string, theme: UiTheme): string {
             <legend class="visually-hidden">Planification</legend>
             <div class="schedule-preview-block">
               <p class="schedule-preview-text" id="schedule-preview-text">Tous les jours à 09:00</p>
+              <p class="schedule-preview-prev-line">
+                Précédente exécution : <span id="schedule-preview-prev">—</span>
+              </p>
               <p class="schedule-preview-next-line">
                 Prochaine exécution : <span id="schedule-preview-next">—</span>
               </p>
@@ -218,35 +224,16 @@ body {
 
 .view.hidden { display: none; }
 
-.tasks-panel {
-  padding: 0; /* padding unifié via .shell-box .tasks-panel */
-}
-
-.entity-list-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
-}
-
-.entity-list-header > div:first-child {
-  flex: 1;
-  min-width: 0;
-}
-
-.tasks-header h2 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  margin-bottom: 0.35rem;
+.tasks-header {
+  margin-bottom: 0.85rem;
 }
 
 .tasks-header p {
   font-size: 0.875rem;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.45;
   max-width: 36rem;
+  margin: 0;
 }
 
 .tasks-directory {
@@ -256,27 +243,6 @@ body {
   font-family: var(--mono);
   word-break: break-all;
 }
-
-.entity-add-btn {
-  flex-shrink: 0;
-  border-radius: 999px;
-  padding: 0.45rem 0.95rem;
-  font-size: 0.84rem;
-  font-weight: 600;
-  background: var(--primary);
-  color: var(--primary-fg);
-  border: 1px solid var(--primary);
-  cursor: pointer;
-  font: inherit;
-  transition: background 0.15s, border-color 0.15s, transform 0.1s;
-}
-
-.entity-add-btn:hover:not(:disabled) {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
-}
-
-.entity-add-btn:active:not(:disabled) { transform: scale(0.98); }
 
 .entity-editor-header {
   display: flex;
@@ -397,7 +363,6 @@ body {
   padding: 0.9rem;
   margin: 0;
   border: none;
-  border-top: 1px solid var(--border);
   background: var(--bg-elevated);
   min-width: 0;
 }
@@ -633,6 +598,7 @@ body {
   color: var(--text);
 }
 
+.schedule-preview-prev-line,
 .schedule-preview-next-line,
 .schedule-preview-timezone {
   margin: 0;
@@ -661,6 +627,17 @@ body {
   padding: 0.7rem 0.8rem;
   display: grid;
   gap: 0.35rem;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.task-card:hover {
+  background: color-mix(in srgb, var(--bg-muted) 70%, var(--bg-hover));
+}
+
+.task-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .task-card.disabled {
@@ -682,55 +659,79 @@ body {
   color: var(--text-muted);
 }
 
-.task-card-header {
+.task-card-inner {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.task-card-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
   gap: 0.2rem;
 }
 
-.task-card-badges {
+.task-card-title-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
   align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .task-card-title {
+  flex: 0 1 auto;
+  min-width: 0;
   font-size: 0.98rem;
   font-weight: 600;
   line-height: 1.25;
   letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.task-card-actions {
-  display: flex;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-  margin-top: 0.35rem;
-  padding-top: 0.55rem;
-  border-top: 1px solid var(--border);
+.task-enabled-dot {
+  flex: 0 0 auto;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  box-sizing: border-box;
 }
 
-.task-card-actions button {
-  border-radius: 8px;
-  padding: 0.35rem 0.65rem;
-  font-size: 0.78rem;
-  background: transparent;
+.task-enabled-dot.is-on {
+  background: var(--ok);
+  border: none;
+}
+
+.task-enabled-dot.is-off {
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border-strong);
+}
+
+.task-card-chevron {
+  flex: 0 0 auto;
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--text-faint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-card-chevron svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.task-schedule-label {
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1.35;
   color: var(--text-muted);
-  border: 1px solid var(--border);
-  cursor: pointer;
-  font: inherit;
-}
-
-.task-card-actions button:hover:not(:disabled) {
-  background: var(--bg-hover);
-  color: var(--text);
-}
-
-.task-card-actions button.danger:hover:not(:disabled) {
-  color: var(--err);
-  border-color: var(--err-border);
-  background: var(--err-bg);
 }
 
 .task-card-message {
@@ -738,8 +739,9 @@ body {
   font-size: 0.84rem;
   color: var(--text-muted);
   line-height: 1.35;
-  white-space: pre-wrap;
-  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .task-card-meta {
@@ -760,25 +762,6 @@ body {
   padding: 0.1rem 0.35rem;
   border-radius: 6px;
 }
-
-.task-schedule-label {
-  font-weight: 500;
-  color: var(--text);
-}
-
-.task-status {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  border-radius: 999px;
-  padding: 0.15rem 0.55rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-
-.task-status.success { background: var(--ok-bg); color: var(--ok-fg); }
-.task-status.error { background: var(--err-bg); color: var(--err); }
-.task-status.never { background: var(--bg-muted); color: var(--text-muted); }
 
 @media (max-width: 768px) {
   .cron-fields-grid { gap: 0.25rem; }
@@ -806,6 +789,7 @@ const cronFieldsGrid = document.getElementById("cron-fields-grid");
 const cronFieldHint = document.getElementById("cron-field-hint");
 const cronFieldHintBar = document.getElementById("cron-field-hint-bar");
 const schedulePreviewText = document.getElementById("schedule-preview-text");
+const schedulePreviewPrev = document.getElementById("schedule-preview-prev");
 const schedulePreviewNext = document.getElementById("schedule-preview-next");
 const schedulePreviewError = document.getElementById("schedule-preview-error");
 const taskFormSubmit = document.getElementById("task-form-submit");
@@ -1101,18 +1085,6 @@ function formatDateTime(value) {
   return new Date(value).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
 }
 
-function statusLabel(status) {
-  switch (status) {
-    case "success": return "Succès";
-    case "error": return "Erreur";
-    default: return "Jamais";
-  }
-}
-
-function statusClass(status) {
-  return status ?? "never";
-}
-
 function showList() {
   editorOpen = false;
   viewEditor.classList.add("hidden");
@@ -1131,6 +1103,7 @@ function resetTaskForm() {
   if (taskEnabledInput) taskEnabledInput.checked = true;
   if (taskFormSubmit) taskFormSubmit.textContent = "Ajouter";
   if (taskEditorTitle) taskEditorTitle.textContent = "Nouvelle tâche";
+  if (schedulePreviewPrev) schedulePreviewPrev.textContent = "—";
   resetCronFieldState();
 }
 
@@ -1156,6 +1129,7 @@ function openTaskEditorEdit(task) {
   parseCronToScheduleUI(task.cron);
   if (taskFormSubmit) taskFormSubmit.textContent = "Enregistrer";
   if (taskEditorTitle) taskEditorTitle.textContent = "Modifier — " + task.name;
+  if (schedulePreviewPrev) schedulePreviewPrev.textContent = formatDateTime(task.lastRunAt);
   setTasksError("", "editor");
 }
 
@@ -1168,47 +1142,37 @@ function renderScheduledTasks() {
     (a, b) => Number(!!b.enabled) - Number(!!a.enabled),
   );
 
+  const ICON_CHEVRON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>';
+
   for (const task of ordered) {
     const card = document.createElement("article");
     card.className = "task-card" + (task.enabled ? "" : " disabled");
-    const status = task.lastRunStatus;
     card.innerHTML =
-      '<div class="task-card-header">' +
-        '<div class="task-card-title">' + escapeHtml(task.name) + "</div>" +
-        '<div class="task-card-badges">' +
-          '<span class="skill-status ' + (task.enabled ? "enabled" : "disabled") + '">' +
-            (task.enabled ? "Activée" : "Désactivée") +
-          "</span>" +
-          '<span class="task-status ' + statusClass(status) + '">' + statusLabel(status) + "</span>" +
+      '<div class="task-card-inner">' +
+        '<div class="task-card-content">' +
+          '<div class="task-card-title-row">' +
+            '<div class="task-card-title">' + escapeHtml(task.name) + "</div>" +
+            '<span class="task-enabled-dot ' + (task.enabled ? "is-on" : "is-off") + '" title="' +
+              (task.enabled ? "Activée" : "Désactivée") +
+              '" aria-label="' + (task.enabled ? "Activée" : "Désactivée") + '"></span>' +
+          "</div>" +
+          '<div class="task-schedule-label">' + escapeHtml(describeCronExpression(task.cron)) + "</div>" +
+          '<div class="task-card-message">' + escapeHtml(task.message) + "</div>" +
+          (task.lastError ? '<div class="task-card-meta"><span>Détail : ' + escapeHtml(task.lastError) + "</span></div>" : "") +
         "</div>" +
-      "</div>" +
-      '<div class="task-card-message">' + escapeHtml(task.message) + "</div>" +
-      '<div class="task-card-meta">' +
-        '<span class="task-schedule-label">' + escapeHtml(describeCronExpression(task.cron)) + "</span>" +
-        "<span>Cron : <code>" + escapeHtml(task.cron) + "</code></span>" +
-        "<span>Prochaine exécution : " + formatDateTime(task.nextRunAt) + "</span>" +
-        "<span>Dernière exécution : " + formatDateTime(task.lastRunAt) + "</span>" +
-        (task.lastSessionID
-          ? "<span>Session : <code>" + escapeHtml(task.lastSessionID) + "</code></span>"
-          : "") +
-        (task.lastError ? "<span>Détail : " + escapeHtml(task.lastError) + "</span>" : "") +
-      "</div>" +
-      '<div class="task-card-actions">' +
-        '<button type="button" data-action="toggle">' + (task.enabled ? "Désactiver" : "Activer") + "</button>" +
-        '<button type="button" data-action="edit">Modifier</button>' +
-        '<button type="button" class="danger" data-action="delete">Supprimer</button>' +
+        '<span class="task-card-chevron" aria-hidden="true">' + ICON_CHEVRON + "</span>" +
       "</div>";
 
-    card.querySelector('[data-action="edit"]')?.addEventListener("click", () => openTaskEditorEdit(task));
-    card.querySelector('[data-action="delete"]')?.addEventListener("click", () => { void deleteScheduledTask(task.id); });
-    card.querySelector('[data-action="toggle"]')?.addEventListener("click", () => {
-      void saveScheduledTask({
-        id: task.id,
-        name: task.name,
-        message: task.message,
-        cron: task.cron,
-        enabled: !task.enabled,
-      });
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", "Modifier " + task.name);
+    card.addEventListener("click", () => openTaskEditorEdit(task));
+    card.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        openTaskEditorEdit(task);
+      }
     });
     tasksListEl.appendChild(card);
   }
