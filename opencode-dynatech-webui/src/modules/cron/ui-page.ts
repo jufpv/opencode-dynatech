@@ -1,25 +1,8 @@
-import type { UiTheme } from "./theme.ts"
-import { themeColorScheme } from "./theme.ts"
-import { ICON_PLUS, NAV_CSS, renderShell } from "../../shell/nav.ts"
+import { ICON_PLUS } from "../../shell/nav.ts"
 
-export function renderUiPage(timezone: string, theme: UiTheme): string {
+export function renderCronInnerHtml(timezone: string): string {
   const tz = escapeHtml(timezone)
-  const mode = theme.mode
-  const colorScheme = themeColorScheme(mode)
-  const fontOverrides = `:root{--font:${theme.sans};--mono:${theme.mono};--font-size:${theme.fontSize}px}`
-  return `<!DOCTYPE html>
-<html lang="fr" data-theme="${mode}">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="color-scheme" content="${colorScheme}">
-  <title>Automatisations · OpenCode</title>
-  <style>${CSS}${NAV_CSS}${fontOverrides}</style>
-</head>
-<body>
-  ${renderShell(
-    null,
-    `
+  return `
     <div class="view view-tasks" id="view-tasks">
       <section class="panel" aria-labelledby="automations-title">
         <header class="page-chrome">
@@ -96,12 +79,7 @@ export function renderUiPage(timezone: string, theme: UiTheme): string {
         </form>
       </section>
     </div>
-  `,
-    "cron",
-  )}
-  <script>${CLIENT_JS}</script>
-</body>
-</html>`
+  `
 }
 
 function escapeHtml(value: string): string {
@@ -769,6 +747,8 @@ body {
 }
 `
 
+export const CRON_PAGE_CSS = CSS
+
 const CLIENT_JS = `
 const viewTasks = document.getElementById("view-tasks");
 const viewEditor = document.getElementById("view-task-editor");
@@ -1268,3 +1248,5 @@ taskForm?.addEventListener("submit", (event) => {
 resetCronFieldState();
 loadScheduledTasks();
 `
+
+export const CRON_PAGE_JS = CLIENT_JS

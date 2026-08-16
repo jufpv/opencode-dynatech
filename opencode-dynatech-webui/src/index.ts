@@ -75,9 +75,9 @@ export default Plugin.define({
           cronApiUrl: options.cronApiUrl,
           mdnsHost: options.mdnsHost,
           modules: [
-            createHomeModule(),
-            createChatModule(),
-            createDocumentsModule(),
+            createHomeModule(options.cronApiUrl),
+            createChatModule(options.cronApiUrl),
+            createDocumentsModule(options.cronApiUrl),
             createCronModule(options.cronApiUrl),
             createStatusModule(),
             createSkillsModule(),

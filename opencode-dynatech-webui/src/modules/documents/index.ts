@@ -1,11 +1,14 @@
 import type { WebuiModule } from "../../module.ts"
-import { renderDocumentsPage } from "./ui-page.ts"
 import { resolveUiTheme } from "../../shell/theme.ts"
+import { renderToolsWorkspacePage, resolveCronTimezone } from "../../shell/tools-workspace.ts"
 
-export function createDocumentsModule(): WebuiModule {
+export function createDocumentsModule(cronApiUrl: string): WebuiModule {
   return {
     id: "documents",
     mountPath: "/documents",
-    renderPage: () => renderDocumentsPage(resolveUiTheme()),
+    renderPage: async () => {
+      const timezone = await resolveCronTimezone(cronApiUrl)
+      return renderToolsWorkspacePage("documents", resolveUiTheme(), timezone)
+    },
   }
 }

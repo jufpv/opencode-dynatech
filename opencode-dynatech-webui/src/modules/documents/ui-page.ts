@@ -1,7 +1,3 @@
-import type { UiTheme } from "../../shell/theme.ts"
-import { themeColorScheme } from "../../shell/theme.ts"
-import { NAV_CSS, renderShell } from "../../shell/nav.ts"
-
 const ICON_FOLDER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>`
 
 const ICON_FILE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>`
@@ -12,22 +8,8 @@ const ICON_UPLOAD = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 
 const ICON_FOLDER_PLUS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 10v6"/><path d="M9 13h6"/><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>`
 
-export function renderDocumentsPage(theme: UiTheme): string {
-  const colorScheme = themeColorScheme(theme.mode)
-  const fontOverrides = `:root{--font:${theme.sans};--mono:${theme.mono};--font-size:${theme.fontSize}px}`
-  return `<!DOCTYPE html>
-<html lang="fr" data-theme="${theme.mode}">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="color-scheme" content="${colorScheme}">
-  <title>Documents · OpenCode</title>
-  <style>${BASE_CSS}${NAV_CSS}${DOCS_CSS}${fontOverrides}</style>
-</head>
-<body>
-  ${renderShell(
-    null,
-    `
+export function renderDocumentsInnerHtml(): string {
+  return `
     <section class="panel" aria-labelledby="docs-title">
       <header class="page-chrome">
         <div class="entity-list-header">
@@ -54,12 +36,7 @@ export function renderDocumentsPage(theme: UiTheme): string {
         <button type="button" class="docs-menu-item docs-menu-danger" role="menuitem" data-action="delete">Supprimer</button>
       </div>
     </section>
-  `,
-    "documents",
-  )}
-  <script>${DOCS_JS}</script>
-</body>
-</html>`
+  `
 }
 
 const DOCS_JS = `
@@ -475,6 +452,8 @@ const DOCS_JS = `
 
 `
 
+export const DOCS_PAGE_JS = DOCS_JS
+
 const BASE_CSS = `
 :root,:root[data-theme="light"]{color-scheme:light;--bg:#fafafa;--bg-elevated:#fff;--bg-muted:#f4f4f5;--bg-hover:#f4f4f5;--border:#e4e4e7;--border-strong:#d4d4d8;--text:#18181b;--text-muted:#71717a;--text-faint:#a1a1aa;--accent:#2563eb;--ok:#16a34a;--ok-bg:#dcfce7;--ok-fg:#166534;--err:#dc2626;--err-bg:#fef2f2;--err-border:#fecaca;--primary:#18181b;--primary-hover:#27272a;--primary-fg:#fff;--toggle-off:rgba(120,120,128,.22);--toggle-on:#34c759;--shadow:0 1px 2px rgba(0,0,0,.04);--font:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;--font-size:14px}
 @media (prefers-color-scheme:dark){:root[data-theme="system"]{color-scheme:dark;--bg:#111113;--bg-elevated:#18181b;--bg-muted:#1c1c1f;--bg-hover:#27272a;--border:#27272a;--border-strong:#3f3f46;--text:#fafafa;--text-muted:#a1a1aa;--text-faint:#71717a;--accent:#60a5fa;--ok:#4ade80;--ok-bg:#14532d;--ok-fg:#bbf7d0;--err:#f87171;--err-bg:#3f1d1d;--err-border:#7f1d1d;--primary:#fafafa;--primary-hover:#e4e4e7;--primary-fg:#18181b;--toggle-off:rgba(120,120,128,.32);--shadow:none}}
@@ -716,3 +695,5 @@ a.docs-item:visited {
 }
 
 `
+
+export const DOCS_PAGE_CSS = DOCS_CSS

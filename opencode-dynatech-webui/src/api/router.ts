@@ -3,9 +3,11 @@ import { readMultipartForm } from "../lib/multipart.ts"
 import * as events from "../services/events.ts"
 import * as localFiles from "../services/local-files.ts"
 import * as mcps from "../services/mcps.ts"
+import * as models from "../services/models.ts"
 import * as projectAgents from "../services/project-agents.ts"
 import * as projectFiles from "../services/project-files.ts"
 import * as projects from "../services/projects.ts"
+import * as prompts from "../services/prompts.ts"
 import * as sessions from "../services/sessions.ts"
 import * as skills from "../services/skills.ts"
 import * as status from "../services/status.ts"
@@ -42,6 +44,14 @@ export async function handleConfigApi(
   const method = (req.method || "GET").toUpperCase()
 
   try {
+    if (pathname === "/api/models" && method === "GET") {
+      sendJson(res, 200, {
+        models: await models.listModels(),
+        defaultModel: await models.getDefaultModel(),
+      })
+      return true
+    }
+
     if (pathname === "/api/status" && method === "GET") {
       sendJson(res, 200, await status.getStatus(options.cronApiUrl))
       return true
@@ -97,6 +107,35 @@ export async function handleConfigApi(
     }
 
     {
+      const modelMatch = pathname.match(/^\/api\/sessions\/([^/]+)\/model$/)
+      if (modelMatch && method === "POST") {
+        const id = decodeURIComponent(modelMatch[1]!)
+        const body = (await readJson(req)) as {
+          model?: { id?: unknown; providerID?: unknown; variant?: unknown }
+        }
+        const model = body.model
+        if (
+          !model ||
+          typeof model.id !== "string" ||
+          !model.id.trim() ||
+          typeof model.providerID !== "string" ||
+          !model.providerID.trim()
+        ) {
+          sendJson(res, 400, { error: "model.id et model.providerID requis" })
+          return true
+        }
+        await models.switchSessionModel(id, {
+          id: model.id.trim(),
+          providerID: model.providerID.trim(),
+          variant:
+            typeof model.variant === "string" && model.variant.trim()
+              ? model.variant.trim()
+              : undefined,
+        })
+        sendJson(res, 200, { ok: true })
+        return true
+      }
+
       const contextMatch = pathname.match(
         /^\/api\/sessions\/([^/]+)\/context-usage$/,
       )
@@ -147,6 +186,83 @@ export async function handleConfigApi(
         sendJson(res, 200, { ok: true })
         return true
       }
+
+      const permissionListMatch = pathname.match(/^\/api\/sessions\/([^/]+)\/permissions$/)
+      if (permissionListMatch && method === "GET") {
+        const id = decodeURIComponent(permissionListMatch[1]!)
+        sendJson(res, 200, { permissions: await prompts.listSessionPermissions(id) })
+        return true
+      }
+
+      const permissionReplyMatch = pathname.match(
+        /^\/api\/sessions\/([^/]+)\/permissions\/([^/]+)\/reply$/,
+      )
+      if (permissionReplyMatch && method === "POST") {
+        const id = decodeURIComponent(permissionReplyMatch[1]!)
+        const requestID = decodeURIComponent(permissionReplyMatch[2]!)
+        const body = (await readJson(req)) as { reply?: unknown; message?: unknown }
+        const reply = body.reply
+        if (reply !== "once" && reply !== "always" && reply !== "reject") {
+          sendJson(res, 400, { error: "reply invalide (once|always|reject)" })
+          return true
+        }
+        await prompts.replySessionPermission(
+          id,
+          requestID,
+          reply,
+          typeof body.message === "string" ? body.message : undefined,
+        )
+        sendJson(res, 200, { ok: true })
+        return true
+      }
+
+      const questionListMatch = pathname.match(/^\/api\/sessions\/([^/]+)\/questions$/)
+      if (questionListMatch && method === "GET") {
+        const id = decodeURIComponent(questionListMatch[1]!)
+        sendJson(res, 200, { questions: await prompts.listSessionQuestions(id) })
+        return true
+      }
+
+      const questionReplyMatch = pathname.match(
+        /^\/api\/sessions\/([^/]+)\/questions\/([^/]+)\/reply$/,
+      )
+      if (questionReplyMatch && method === "POST") {
+        const id = decodeURIComponent(questionReplyMatch[1]!)
+        const requestID = decodeURIComponent(questionReplyMatch[2]!)
+        const body = (await readJson(req)) as { answer?: unknown; answers?: unknown }
+        if (body.answer && typeof body.answer === "object" && !Array.isArray(body.answer)) {
+          const answer: prompts.FormAnswer = {}
+          for (const [key, value] of Object.entries(body.answer as Record<string, unknown>)) {
+            if (Array.isArray(value)) answer[key] = value.map((x) => String(x ?? ""))
+            else if (value != null) answer[key] = String(value)
+          }
+          await prompts.replySessionQuestion(id, requestID, answer)
+          sendJson(res, 200, { ok: true })
+          return true
+        }
+        if (!Array.isArray(body.answers)) {
+          sendJson(res, 400, { error: "answer ou answers requis" })
+          return true
+        }
+        const answers = body.answers.map((row) =>
+          Array.isArray(row) ? row.map((x) => String(x ?? "")) : [],
+        )
+        await prompts.replySessionQuestion(id, requestID, answers)
+        sendJson(res, 200, { ok: true })
+        return true
+      }
+
+      const questionRejectMatch = pathname.match(
+        /^\/api\/sessions\/([^/]+)\/questions\/([^/]+)\/reject$/,
+      )
+      if (questionRejectMatch && method === "POST") {
+        const id = decodeURIComponent(questionRejectMatch[1]!)
+        const requestID = decodeURIComponent(questionRejectMatch[2]!)
+        await prompts.rejectSessionQuestion(id, requestID)
+        sendJson(res, 200, { ok: true })
+        return true
+      }
+
       const sessionMatch = pathname.match(/^\/api\/sessions\/([^/]+)$/)
       if (sessionMatch) {
         const id = decodeURIComponent(sessionMatch[1]!)

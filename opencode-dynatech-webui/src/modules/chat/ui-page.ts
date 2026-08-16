@@ -1,7 +1,5 @@
 import { LITE_MARKDOWN_BROWSER_JS } from "../../lib/lite-markdown.ts"
-import type { UiTheme } from "../../shell/theme.ts"
-import { themeColorScheme } from "../../shell/theme.ts"
-import { ICON_PLUS, NAV_CSS, renderShell } from "../../shell/nav.ts"
+import { ICON_PLUS } from "../../shell/nav.ts"
 
 const ICON_ATTACH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.88 18.09a2 2 0 0 1-2.83-2.83l8.49-8.49"/></svg>`
 
@@ -16,6 +14,8 @@ const ICON_CHIP_CHEVRON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentC
 const ICON_SEND = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>`
 
 const ICON_STOP = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>`
+
+const ICON_WARN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
 
 function sessionPickerHtml(): string {
   return `<div class="session-picker" id="session-picker">
@@ -32,35 +32,28 @@ function sessionPickerHtml(): string {
 </div>`
 }
 
-function modelEffortHtml(): string {
-  return `<div class="chat-model-bar" aria-label="Modèle et effort">
-  <button type="button" class="chat-chip" title="Modèle" aria-label="Modèle">
-    <span>DeepSeek V4 Flash Free</span>
+function modelMenuHtml(): string {
+  return `<div class="model-menu" id="model-menu">
+  <button type="button" class="model-menu-trigger" id="model-menu-trigger" aria-haspopup="dialog" aria-expanded="false" title="Modèle et effort" aria-label="Modèle et effort">
+    <span class="model-menu-label" id="model-menu-label">Modèle</span>
     ${ICON_CHIP_CHEVRON}
   </button>
-  <button type="button" class="chat-chip" title="Effort" aria-label="Effort">
-    <span>Default</span>
-    ${ICON_CHIP_CHEVRON}
-  </button>
+  <div class="model-menu-panel" id="model-menu-panel" hidden>
+    <div class="model-menu-section">
+      <div class="model-menu-section-title">Modèle</div>
+      <input type="search" class="model-menu-search" id="model-menu-search" placeholder="Rechercher un modèle…" autocomplete="off">
+      <div class="model-menu-list" id="model-menu-list" role="listbox" aria-label="Modèles"></div>
+    </div>
+    <div class="model-menu-section">
+      <div class="model-menu-section-title">Reasoning effort</div>
+      <div class="model-menu-effort" id="model-menu-effort" role="listbox" aria-label="Effort"></div>
+    </div>
+  </div>
 </div>`
 }
 
-export function renderChatPage(theme: UiTheme): string {
-  const colorScheme = themeColorScheme(theme.mode)
-  const fontOverrides = `:root{--font:${theme.sans};--mono:${theme.mono};--font-size:${theme.fontSize}px}`
-  return `<!DOCTYPE html>
-<html lang="fr" data-theme="${theme.mode}">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="color-scheme" content="${colorScheme}">
-  <title>Chat · OpenCode</title>
-  <style>${BASE_CSS}${NAV_CSS}${CHAT_CSS}${fontOverrides}</style>
-</head>
-<body>
-  ${renderShell(
-    null,
-    `
+export function renderChatInnerHtml(): string {
+  return `
     <div class="chat-page is-list" id="chat-page">
       <section class="chat-list panel" id="chat-list" aria-labelledby="chat-list-title">
         <header class="page-chrome">
@@ -80,7 +73,7 @@ export function renderChatPage(theme: UiTheme): string {
         <header class="chat-toolbar">
           ${sessionPickerHtml()}
           <div class="chat-toolbar-right">
-            ${modelEffortHtml()}
+            ${modelMenuHtml()}
             <div class="context-wheel" id="context-wheel" title="Utilisation du contexte" aria-label="Utilisation du contexte" hidden>
               <svg viewBox="0 0 36 36" aria-hidden="true">
                 <circle class="context-wheel-track" cx="18" cy="18" r="14"></circle>
@@ -99,6 +92,8 @@ export function renderChatPage(theme: UiTheme): string {
             <span>Interrompu</span>
           </div>
 
+          <div class="chat-prompts" id="chat-prompts" hidden aria-live="polite"></div>
+
           <form class="chat-composer" id="chat-composer" autocomplete="off">
             <button type="button" class="chat-attach-btn" title="Joindre une image ou un document" aria-label="Joindre un fichier">${ICON_ATTACH}</button>
             <textarea class="chat-composer-input" id="chat-input" rows="1" placeholder="Demandez n'importe quoi..."></textarea>
@@ -107,18 +102,14 @@ export function renderChatPage(theme: UiTheme): string {
         </div>
       </div>
     </div>
-  `,
-    "chat",
-  )}
-  <script>${CHAT_JS}</script>
-</body>
-</html>`
+  `
 }
 
 const CHAT_JS = `
 (function () {
   const ICON_CHAT = ${JSON.stringify(ICON_CHAT)};
   const ICON_LIST_CHEVRON = ${JSON.stringify(ICON_LIST_CHEVRON)};
+  const ICON_WARN = ${JSON.stringify(ICON_WARN)};
   const shellEl = document.querySelector(".shell");
   const chatPage = document.getElementById("chat-page");
   const listView = document.getElementById("chat-list");
@@ -134,14 +125,28 @@ const CHAT_JS = `
   const emptyEl = document.getElementById("session-empty");
   const messagesEl = document.getElementById("chat-messages");
   const interruptedEl = document.getElementById("chat-interrupted");
+  const promptsEl = document.getElementById("chat-prompts");
   const contextWheel = document.getElementById("context-wheel");
   const contextWheelFill = document.getElementById("context-wheel-fill");
+  const modelMenu = document.getElementById("model-menu");
+  const modelMenuTrigger = document.getElementById("model-menu-trigger");
+  const modelMenuPanel = document.getElementById("model-menu-panel");
+  const modelMenuLabel = document.getElementById("model-menu-label");
+  const modelMenuSearch = document.getElementById("model-menu-search");
+  const modelMenuList = document.getElementById("model-menu-list");
+  const modelMenuEffort = document.getElementById("model-menu-effort");
   const form = document.getElementById("chat-composer");
   const input = document.getElementById("chat-input");
   if (!chatPage || !listView || !listItems || !roomView || !picker || !trigger || !menu || !nameEl || !list || !messagesEl) return;
 
   let sessions = [];
   let currentId = "";
+  let modelCatalog = [];
+  let modelCatalogLoaded = false;
+  let selectedModelId = "";
+  let selectedProviderID = "";
+  let selectedVariant = "";
+  let selectedModelName = "";
   let liveMessages = [];
   let sending = false;
   let streamSessionId = "";
@@ -151,6 +156,9 @@ const CHAT_JS = `
   let finishTimer = null;
   let sendGeneration = 0;
   let showInterrupted = false;
+  let pendingPermissions = [];
+  let pendingQuestions = [];
+  let questionDrafts = {};
   const WHEEL_C = 2 * Math.PI * 14;
 
   function setInterrupted(on) {
@@ -165,6 +173,10 @@ const CHAT_JS = `
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function escapeAttr(text) {
+    return escapeHtml(text).replace(/'/g, "&#39;");
   }
 
   ${LITE_MARKDOWN_BROWSER_JS}
@@ -225,6 +237,7 @@ const CHAT_JS = `
     const options = opts || {};
     currentId = "";
     setInterrupted(false);
+    clearPrompts();
     setOpen(false);
     listView.hidden = false;
     roomView.hidden = true;
@@ -261,6 +274,352 @@ const CHAT_JS = `
     return labels[name] || name || "Outil";
   }
 
+  function permissionActionLabel(action) {
+    const labels = {
+      read: "Lecture d'un fichier (correspond au chemin du fichier)",
+      edit: "Modifier des fichiers, notamment au moyen des outils edit, write et patch",
+      glob: "Rechercher des fichiers à l'aide de motifs glob",
+      grep: "Rechercher dans le contenu des fichiers à l'aide d'expressions régulières",
+      list: "Lister les fichiers dans un répertoire",
+      bash: "Exécuter des commandes shell",
+      task: "Lancer des sous-agents",
+      skill: "Charger une compétence par son nom",
+      lsp: "Exécuter des requêtes de serveur de langage",
+      todowrite: "Mettre à jour la liste de tâches",
+      webfetch: "Récupérer le contenu d'une URL",
+      websearch: "Rechercher sur le Web",
+      external_directory: "Accéder aux fichiers en dehors du répertoire du projet",
+      doom_loop: "Détecter les appels d'outils répétés avec une entrée identique",
+      question: "Poser une question à l'utilisateur",
+    };
+    return labels[action] || action || "Permission";
+  }
+
+  function clearPrompts() {
+    pendingPermissions = [];
+    pendingQuestions = [];
+    questionDrafts = {};
+    paintPrompts();
+  }
+
+  function normalizePermissionPrompt(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const id = typeof raw.id === "string" ? raw.id : "";
+    const sessionID = typeof raw.sessionID === "string" ? raw.sessionID : "";
+    if (!id || !sessionID) return null;
+    const action =
+      typeof raw.action === "string"
+        ? raw.action
+        : typeof raw.permission === "string"
+          ? raw.permission
+          : "permission";
+    const resources = Array.isArray(raw.resources)
+      ? raw.resources.filter((x) => typeof x === "string")
+      : Array.isArray(raw.patterns)
+        ? raw.patterns.filter((x) => typeof x === "string")
+        : [];
+    return { id, sessionID, action, resources };
+  }
+
+  function normalizeQuestionPrompt(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const id = typeof raw.id === "string" ? raw.id : "";
+    const sessionID = typeof raw.sessionID === "string" ? raw.sessionID : "";
+    if (!id || !sessionID) return null;
+
+    function mapOption(opt) {
+      if (!opt || typeof opt !== "object") return null;
+      const value =
+        typeof opt.value === "string"
+          ? opt.value
+          : typeof opt.label === "string"
+            ? opt.label
+            : "";
+      const label = typeof opt.label === "string" ? opt.label : value;
+      if (!value && !label) return null;
+      return {
+        value: value || label,
+        label: label || value,
+        description: typeof opt.description === "string" ? opt.description : "",
+      };
+    }
+
+    // OpenCode Form API (frm_*)
+    if (Array.isArray(raw.fields)) {
+      const meta = raw.metadata && typeof raw.metadata === "object" ? raw.metadata : {};
+      if (meta.kind && meta.kind !== "question") return null;
+      const questions = raw.fields
+        .map((f, index) => {
+          if (!f || typeof f !== "object") return null;
+          const key = typeof f.key === "string" && f.key.trim() ? f.key.trim() : "q" + index;
+          const header = typeof f.title === "string" ? f.title : "";
+          const question = typeof f.description === "string" ? f.description : header;
+          if (!question && !header) return null;
+          return {
+            key,
+            question: question || header,
+            header: header || question,
+            options: Array.isArray(f.options) ? f.options.map(mapOption).filter(Boolean) : [],
+            multiple: f.type === "multiselect" || !!f.multiple,
+          };
+        })
+        .filter(Boolean);
+      return { id, sessionID, questions };
+    }
+
+    const questions = Array.isArray(raw.questions)
+      ? raw.questions
+          .map((q, index) => {
+            if (!q || typeof q !== "object") return null;
+            const question = typeof q.question === "string" ? q.question : "";
+            const header = typeof q.header === "string" ? q.header : question;
+            if (!question && !header) return null;
+            return {
+              key: typeof q.key === "string" ? q.key : "q" + index,
+              question: question || header,
+              header: header || question,
+              options: Array.isArray(q.options) ? q.options.map(mapOption).filter(Boolean) : [],
+              multiple: !!q.multiple,
+            };
+          })
+          .filter(Boolean)
+      : [];
+    return { id, sessionID, questions };
+  }
+
+  function upsertPermissionPrompt(raw) {
+    const item = normalizePermissionPrompt(raw);
+    if (!item) return;
+    if (currentId && item.sessionID !== currentId) return;
+    const idx = pendingPermissions.findIndex((p) => p.id === item.id);
+    if (idx >= 0) pendingPermissions[idx] = item;
+    else pendingPermissions.push(item);
+    paintPrompts();
+  }
+
+  function removePermissionPrompt(requestID) {
+    const before = pendingPermissions.length;
+    pendingPermissions = pendingPermissions.filter((p) => p.id !== requestID);
+    if (pendingPermissions.length !== before) paintPrompts();
+  }
+
+  function upsertQuestionPrompt(raw) {
+    const item = normalizeQuestionPrompt(raw);
+    if (!item) return;
+    if (currentId && item.sessionID !== currentId) return;
+    const idx = pendingQuestions.findIndex((q) => q.id === item.id);
+    if (idx >= 0) pendingQuestions[idx] = item;
+    else pendingQuestions.push(item);
+    if (!questionDrafts[item.id]) {
+      questionDrafts[item.id] = item.questions.map(() => ({
+        selected: [],
+        custom: "",
+        customOn: false,
+      }));
+    }
+    paintPrompts();
+  }
+
+  function removeQuestionPrompt(requestID) {
+    const before = pendingQuestions.length;
+    pendingQuestions = pendingQuestions.filter((q) => q.id !== requestID);
+    delete questionDrafts[requestID];
+    if (pendingQuestions.length !== before) paintPrompts();
+  }
+
+  function renderPermissionCard(p) {
+    const resources = (p.resources || []).map((r) => escapeHtml(r)).join("<br>");
+    return (
+      '<article class="prompt-card prompt-permission" data-kind="permission" data-id="' + escapeAttr(p.id) + '">' +
+        '<header class="prompt-card-head">' +
+          '<span class="prompt-card-icon" aria-hidden="true">' + ICON_WARN + "</span>" +
+          "<strong>Permission requise</strong>" +
+        "</header>" +
+        '<p class="prompt-card-body">' + escapeHtml(permissionActionLabel(p.action)) + "</p>" +
+        (resources ? '<p class="prompt-card-meta">' + resources + "</p>" : "") +
+        '<div class="prompt-card-actions">' +
+          '<button type="button" class="prompt-btn" data-reply="reject">Refuser</button>' +
+          '<button type="button" class="prompt-btn" data-reply="always">Toujours autoriser</button>' +
+          '<button type="button" class="prompt-btn prompt-btn-primary" data-reply="once">Autoriser une fois</button>' +
+        "</div>" +
+      "</article>"
+    );
+  }
+
+  function renderQuestionCard(q) {
+    const draft = questionDrafts[q.id] || [];
+    const total = (q.questions || []).length || 1;
+    const blocks = (q.questions || []).map((item, qi) => {
+      const d = draft[qi] || { selected: [], custom: "", customOn: false };
+      const opts = (item.options || []).map((opt) => {
+        const value = opt.value || opt.label;
+        const on = (d.selected || []).indexOf(value) >= 0;
+        return (
+          '<button type="button" class="prompt-option' + (on ? " is-selected" : "") + '" data-q="' + qi + '" data-opt="' + escapeAttr(value) + '">' +
+            "<span>" + escapeHtml(opt.label || value) + "</span>" +
+            (opt.description ? '<small>' + escapeHtml(opt.description) + "</small>" : "") +
+          "</button>"
+        );
+      }).join("");
+      const customOn = !!d.customOn || (!!(d.custom || "").trim() && !(d.selected || []).length);
+      const customBtn =
+        '<button type="button" class="prompt-option prompt-option-custom' + (customOn ? " is-selected" : "") + '" data-q="' + qi + '" data-custom="1">' +
+          "<span>Tapez votre propre réponse</span>" +
+        "</button>";
+      const customInput = customOn
+        ? '<input class="prompt-custom" type="text" data-q="' + qi + '" placeholder="Tapez votre réponse..." value="' + escapeAttr(d.custom || "") + '">'
+        : "";
+      const hint = item.multiple ? "Sélectionnez tout ce qui s'applique" : "Sélectionnez une réponse";
+      return (
+        '<div class="prompt-question" data-q="' + qi + '">' +
+          '<div class="prompt-question-title">' + escapeHtml(item.question || item.header || "Question") + "</div>" +
+          '<div class="prompt-question-hint">' + escapeHtml(hint) + "</div>" +
+          '<div class="prompt-options">' + opts + customBtn + "</div>" +
+          customInput +
+        "</div>"
+      );
+    }).join("");
+    const progress = total > 1 ? (total + " questions") : "1 question sur 1";
+    return (
+      '<article class="prompt-card prompt-question-card" data-kind="question" data-id="' + escapeAttr(q.id) + '">' +
+        '<header class="prompt-card-head">' +
+          '<span class="prompt-card-icon" aria-hidden="true">' + ICON_WARN + "</span>" +
+          "<strong>" + escapeHtml(progress) + "</strong>" +
+        "</header>" +
+        blocks +
+        '<div class="prompt-card-actions">' +
+          '<button type="button" class="prompt-btn" data-reply="reject">Ignorer</button>' +
+          '<button type="button" class="prompt-btn prompt-btn-primary" data-reply="submit">Soumettre</button>' +
+        "</div>" +
+      "</article>"
+    );
+  }
+
+  function paintPrompts() {
+    if (!promptsEl) return;
+    const html =
+      pendingPermissions.map(renderPermissionCard).join("") +
+      pendingQuestions.map(renderQuestionCard).join("");
+    promptsEl.innerHTML = html;
+    promptsEl.hidden = !html;
+  }
+
+  async function loadPendingPrompts(sessionId) {
+    if (!sessionId) {
+      clearPrompts();
+      return;
+    }
+    try {
+      const [permRes, qRes] = await Promise.all([
+        fetch("/api/sessions/" + encodeURIComponent(sessionId) + "/permissions", { cache: "no-store" }),
+        fetch("/api/sessions/" + encodeURIComponent(sessionId) + "/questions", { cache: "no-store" }),
+      ]);
+      const permData = await permRes.json().catch(() => ({}));
+      const qData = await qRes.json().catch(() => ({}));
+      if (sessionId !== currentId) return;
+      pendingPermissions = permRes.ok && Array.isArray(permData.permissions)
+        ? permData.permissions.map(normalizePermissionPrompt).filter(Boolean)
+        : [];
+      pendingQuestions = qRes.ok && Array.isArray(qData.questions)
+        ? qData.questions.map(normalizeQuestionPrompt).filter(Boolean)
+        : [];
+      questionDrafts = {};
+      for (const q of pendingQuestions) {
+        questionDrafts[q.id] = q.questions.map(() => ({ selected: [], custom: "", customOn: false }));
+      }
+      paintPrompts();
+    } catch (_) {
+      if (sessionId !== currentId) return;
+      // Keep any live SSE cards if list fails.
+    }
+  }
+
+  async function replyPermission(requestID, reply) {
+    if (!currentId || !requestID) return;
+    const card = promptsEl && promptsEl.querySelector('.prompt-card[data-id="' + CSS.escape(requestID) + '"]');
+    if (card) card.classList.add("is-busy");
+    try {
+      const res = await fetch(
+        "/api/sessions/" + encodeURIComponent(currentId) + "/permissions/" + encodeURIComponent(requestID) + "/reply",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ reply }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+      removePermissionPrompt(requestID);
+    } catch (err) {
+      if (card) card.classList.remove("is-busy");
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Impossible de répondre");
+    }
+  }
+
+  function collectQuestionAnswers(requestID) {
+    const q = pendingQuestions.find((item) => item.id === requestID);
+    if (!q) return null;
+    const draft = questionDrafts[requestID] || [];
+    const answer = {};
+    for (let qi = 0; qi < q.questions.length; qi++) {
+      const item = q.questions[qi];
+      const d = draft[qi] || { selected: [], custom: "", customOn: false };
+      const custom = String(d.custom || "").trim();
+      const selected = Array.isArray(d.selected) ? d.selected.slice() : [];
+      let values = selected.slice();
+      if (d.customOn || (!values.length && custom)) {
+        if (!custom) return null;
+        values = item.multiple ? Array.from(new Set(values.concat([custom]))) : [custom];
+      }
+      if (!values.length) return null;
+      answer[item.key || ("q" + qi)] = item.multiple ? values : values[0];
+    }
+    return answer;
+  }
+
+  async function replyQuestion(requestID, answer) {
+    if (!currentId || !requestID) return;
+    const card = promptsEl && promptsEl.querySelector('.prompt-card[data-id="' + CSS.escape(requestID) + '"]');
+    if (card) card.classList.add("is-busy");
+    try {
+      const res = await fetch(
+        "/api/sessions/" + encodeURIComponent(currentId) + "/questions/" + encodeURIComponent(requestID) + "/reply",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ answer }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || data.message || ("HTTP " + res.status));
+      removeQuestionPrompt(requestID);
+    } catch (err) {
+      if (card) card.classList.remove("is-busy");
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Impossible de répondre");
+    }
+  }
+
+  async function rejectQuestion(requestID) {
+    if (!currentId || !requestID) return;
+    const card = promptsEl && promptsEl.querySelector('.prompt-card[data-id="' + CSS.escape(requestID) + '"]');
+    if (card) card.classList.add("is-busy");
+    try {
+      const res = await fetch(
+        "/api/sessions/" + encodeURIComponent(currentId) + "/questions/" + encodeURIComponent(requestID) + "/reject",
+        { method: "POST" },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+      removeQuestionPrompt(requestID);
+    } catch (err) {
+      if (card) card.classList.remove("is-busy");
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Impossible de refuser");
+    }
+  }
+
   function toolTitle(part) {
     const label = toolLabel(part.name);
     if (part.status === "error") return label + " Échec";
@@ -269,6 +628,13 @@ const CHAT_JS = `
   }
 
   function renderToolPart(part) {
+    // Desktop hides the question tool while the form dock is active.
+    if (
+      part.name === "question" &&
+      (part.status === "running" || part.status === "streaming" || part.status === "pending")
+    ) {
+      return "";
+    }
     const status = part.status || "running";
     const title = escapeHtml(toolTitle(part));
     const detail = escapeHtml(part.error || part.inputSummary || "");
@@ -617,11 +983,65 @@ const CHAT_JS = `
     if (!evt || typeof evt !== "object") return;
     const type = evt.type;
     const data = evt.data || {};
-    const sid = data.sessionID || "";
+    const sid =
+      data.sessionID ||
+      (data.form && data.form.sessionID) ||
+      "";
     if (sid && currentId && sid !== currentId) return;
     // Accept live tokens for the active send (or matching stream session).
     const live = sending || (streamSessionId && sid && sid === streamSessionId);
-    if (!live && type !== "session.execution.succeeded" && type !== "session.execution.failed" && type !== "session.execution.interrupted" && type !== "session.idle") {
+    const isPromptEvent =
+      type === "permission.asked" ||
+      type === "permission.replied" ||
+      type === "permission.v2.asked" ||
+      type === "permission.v2.replied" ||
+      type === "question.asked" ||
+      type === "question.replied" ||
+      type === "question.rejected" ||
+      type === "question.v2.asked" ||
+      type === "question.v2.replied" ||
+      type === "question.v2.rejected" ||
+      type === "form.created" ||
+      type === "form.replied" ||
+      type === "form.cancelled";
+    if (
+      !live &&
+      !isPromptEvent &&
+      type !== "session.execution.succeeded" &&
+      type !== "session.execution.failed" &&
+      type !== "session.execution.interrupted" &&
+      type !== "session.idle"
+    ) {
+      return;
+    }
+
+    if (type === "permission.asked" || type === "permission.v2.asked") {
+      upsertPermissionPrompt(data);
+      return;
+    }
+    if (type === "permission.replied" || type === "permission.v2.replied") {
+      removePermissionPrompt(data.requestID || data.id || "");
+      return;
+    }
+    if (type === "form.created") {
+      upsertQuestionPrompt(data.form || data);
+      return;
+    }
+    if (type === "form.replied" || type === "form.cancelled") {
+      removeQuestionPrompt(data.id || data.formID || data.requestID || "");
+      return;
+    }
+    if (type === "question.asked" || type === "question.v2.asked") {
+      upsertQuestionPrompt(data);
+      return;
+    }
+    if (
+      type === "question.replied" ||
+      type === "question.rejected" ||
+      type === "question.v2.replied" ||
+      type === "question.v2.rejected"
+    ) {
+      removeQuestionPrompt(data.requestID || data.id || "");
       return;
     }
 
@@ -741,6 +1161,140 @@ const CHAT_JS = `
     };
   }
 
+  function currentModelEntry() {
+    return modelCatalog.find((m) => m.id === selectedModelId && m.providerID === selectedProviderID)
+      || modelCatalog.find((m) => m.id === selectedModelId)
+      || null;
+  }
+
+  function effortLabel(variantId) {
+    if (!variantId) return "Default";
+    const entry = currentModelEntry();
+    const match = entry && (entry.variants || []).find((v) => v.id === variantId);
+    return (match && match.label) || variantId;
+  }
+
+  function paintModelMenuLabel() {
+    if (!modelMenuLabel) return;
+    const name = selectedModelName || selectedModelId || "Modèle";
+    const effort = effortLabel(selectedVariant);
+    modelMenuLabel.textContent = name;
+    modelMenuLabel.title = name + " · " + effort;
+    if (modelMenuTrigger) {
+      modelMenuTrigger.title = "Modèle : " + name + " · Effort : " + effort;
+    }
+  }
+
+  function setModelMenuOpen(open) {
+    if (!modelMenu || !modelMenuTrigger || !modelMenuPanel) return;
+    modelMenu.classList.toggle("open", open);
+    modelMenuTrigger.setAttribute("aria-expanded", open ? "true" : "false");
+    modelMenuPanel.hidden = !open;
+    if (open) {
+      void ensureModelCatalog();
+      paintModelMenuLists();
+      if (modelMenuSearch) {
+        modelMenuSearch.value = "";
+        setTimeout(() => modelMenuSearch.focus(), 0);
+      }
+    }
+  }
+
+  function paintModelMenuLists() {
+    if (!modelMenuList || !modelMenuEffort) return;
+    const q = ((modelMenuSearch && modelMenuSearch.value) || "").trim().toLowerCase();
+    const rows = modelCatalog.filter((m) => {
+      if (!q) return true;
+      return (m.name || "").toLowerCase().includes(q)
+        || (m.id || "").toLowerCase().includes(q)
+        || (m.providerID || "").toLowerCase().includes(q);
+    }).slice(0, 80);
+
+    if (!rows.length) {
+      modelMenuList.innerHTML = '<p class="model-menu-empty">Aucun modèle</p>';
+    } else {
+      modelMenuList.innerHTML = rows.map((m) => {
+        const on = m.id === selectedModelId && m.providerID === selectedProviderID;
+        return (
+          '<button type="button" class="model-menu-option' + (on ? " is-selected" : "") + '" data-model-id="' + escapeAttr(m.id) + '" data-provider="' + escapeAttr(m.providerID) + '" role="option" aria-selected="' + (on ? "true" : "false") + '">' +
+            '<span class="model-menu-option-name">' + escapeHtml(m.name) + "</span>" +
+            '<span class="model-menu-option-meta">' + escapeHtml(m.providerID) + "</span>" +
+          "</button>"
+        );
+      }).join("");
+    }
+
+    const entry = currentModelEntry();
+    const variants = entry && Array.isArray(entry.variants) ? entry.variants : [];
+    const effortOptions = [{ id: "", label: "Default" }].concat(variants);
+    modelMenuEffort.innerHTML = effortOptions.map((v) => {
+      const on = (v.id || "") === (selectedVariant || "");
+      return (
+        '<button type="button" class="model-menu-option' + (on ? " is-selected" : "") + '" data-variant="' + escapeAttr(v.id || "") + '" role="option" aria-selected="' + (on ? "true" : "false") + '"' +
+          ((entry && variants.length) || !v.id ? "" : " disabled") + ">" +
+          escapeHtml(v.label) +
+        "</button>"
+      );
+    }).join("");
+    paintModelMenuLabel();
+  }
+
+  async function ensureModelCatalog() {
+    if (modelCatalogLoaded) return;
+    try {
+      const res = await fetch("/api/models", { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+      modelCatalog = Array.isArray(data.models) ? data.models : [];
+      modelCatalogLoaded = true;
+      if (!selectedModelId && data.defaultModel) {
+        selectedModelId = data.defaultModel.id || "";
+        selectedProviderID = data.defaultModel.providerID || "";
+        selectedModelName = data.defaultModel.name || selectedModelId;
+        selectedVariant = "";
+      }
+      paintModelMenuLabel();
+    } catch (err) {
+      console.error(err);
+      if (modelMenuList) {
+        modelMenuList.innerHTML = '<p class="model-menu-empty">' + escapeHtml(err instanceof Error ? err.message : "Erreur") + "</p>";
+      }
+    }
+  }
+
+  async function applyModelSelection(next) {
+    selectedModelId = next.id || selectedModelId;
+    selectedProviderID = next.providerID || selectedProviderID;
+    if ("variant" in next) selectedVariant = next.variant || "";
+    if (next.name) selectedModelName = next.name;
+    else {
+      const entry = currentModelEntry();
+      if (entry) selectedModelName = entry.name;
+    }
+    paintModelMenuLists();
+    if (!currentId || !selectedModelId || !selectedProviderID) return;
+    try {
+      const body = {
+        model: {
+          id: selectedModelId,
+          providerID: selectedProviderID,
+        },
+      };
+      if (selectedVariant) body.model.variant = selectedVariant;
+      const res = await fetch("/api/sessions/" + encodeURIComponent(currentId) + "/model", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || data.message || ("HTTP " + res.status));
+      void loadContextUsage(currentId);
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Impossible de changer de modèle");
+    }
+  }
+
   function formatTokens(n) {
     if (!Number.isFinite(n) || n <= 0) return "0";
     if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\\.0$/, "") + "M";
@@ -768,6 +1322,21 @@ const CHAT_JS = `
       (usage.modelName ? " · " + usage.modelName : "");
     contextWheel.title = "Contexte : " + label;
     contextWheel.setAttribute("aria-label", "Utilisation du contexte : " + label);
+    if (usage.modelId && usage.modelId !== selectedModelId) {
+      selectedModelId = usage.modelId;
+      selectedModelName = usage.modelName || usage.modelId;
+      void ensureModelCatalog().then(() => {
+        const entry = modelCatalog.find((m) => m.id === selectedModelId);
+        if (entry) {
+          selectedProviderID = entry.providerID;
+          selectedModelName = entry.name;
+        }
+        paintModelMenuLabel();
+      });
+    } else if (usage.modelName && !selectedModelName) {
+      selectedModelName = usage.modelName;
+      paintModelMenuLabel();
+    }
   }
 
   async function loadContextUsage(id) {
@@ -837,11 +1406,13 @@ const CHAT_JS = `
     showRoomMode();
     currentId = id;
     setInterrupted(false);
+    clearPrompts();
     nameEl.textContent = name || "Session";
     if (!options.skipUrl) setUrlSession(currentId);
     renderList();
     renderSessionList();
     if (!options.skipMessages) await loadMessages(currentId);
+    void loadPendingPrompts(currentId);
   }
 
   async function loadSessions(preferredId) {
@@ -882,11 +1453,54 @@ const CHAT_JS = `
 
   document.addEventListener("click", (ev) => {
     if (!picker.contains(ev.target)) setOpen(false);
+    if (modelMenu && !modelMenu.contains(ev.target)) setModelMenuOpen(false);
   });
 
   document.addEventListener("keydown", (ev) => {
-    if (ev.key === "Escape") setOpen(false);
+    if (ev.key === "Escape") {
+      setOpen(false);
+      setModelMenuOpen(false);
+    }
   });
+
+  if (modelMenuTrigger && modelMenuPanel) {
+    modelMenuTrigger.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      setOpen(false);
+      setModelMenuOpen(modelMenuPanel.hidden);
+    });
+  }
+  if (modelMenuSearch) {
+    modelMenuSearch.addEventListener("input", () => paintModelMenuLists());
+    modelMenuSearch.addEventListener("click", (ev) => ev.stopPropagation());
+  }
+  if (modelMenuList) {
+    modelMenuList.addEventListener("click", (ev) => {
+      const btn = ev.target.closest("[data-model-id]");
+      if (!btn) return;
+      const id = btn.getAttribute("data-model-id") || "";
+      const providerID = btn.getAttribute("data-provider") || "";
+      const entry = modelCatalog.find((m) => m.id === id && m.providerID === providerID);
+      void applyModelSelection({
+        id,
+        providerID,
+        name: entry ? entry.name : id,
+        variant: "",
+      });
+    });
+  }
+  if (modelMenuEffort) {
+    modelMenuEffort.addEventListener("click", (ev) => {
+      const btn = ev.target.closest("[data-variant]");
+      if (!btn || btn.disabled) return;
+      void applyModelSelection({
+        id: selectedModelId,
+        providerID: selectedProviderID,
+        variant: btn.getAttribute("data-variant") || "",
+      });
+    });
+  }
+  void ensureModelCatalog();
 
   document.addEventListener("dynatech:project-changed", () => {
     setOpen(false);
@@ -1013,6 +1627,19 @@ const CHAT_JS = `
     const sendBtn = form.querySelector(".chat-send");
     const ICON_SEND_SVG = ${JSON.stringify(ICON_SEND)};
     const ICON_STOP_SVG = ${JSON.stringify(ICON_STOP)};
+    const COMPOSER_MAX_LINES = 45;
+
+    function syncComposerHeight() {
+      const styles = window.getComputedStyle(input);
+      const lineHeight = parseFloat(styles.lineHeight) || (parseFloat(styles.fontSize) || 16) * 1.45;
+      const padY = (parseFloat(styles.paddingTop) || 0) + (parseFloat(styles.paddingBottom) || 0);
+      const minH = lineHeight + padY;
+      const maxH = lineHeight * COMPOSER_MAX_LINES + padY;
+      input.style.height = "0px";
+      const next = Math.min(maxH, Math.max(minH, input.scrollHeight));
+      input.style.height = next + "px";
+      input.style.overflowY = input.scrollHeight > maxH + 1 ? "auto" : "hidden";
+    }
 
     function setSending(on) {
       sending = on;
@@ -1109,6 +1736,7 @@ const CHAT_JS = `
         renderMessages(liveMessages);
         ensureThinkingPlaceholder();
         input.value = "";
+        syncComposerHeight();
 
         const res = await fetch("/api/sessions/" + encodeURIComponent(sessionId) + "/messages", {
           method: "POST",
@@ -1150,11 +1778,88 @@ const CHAT_JS = `
       }
     });
 
-    input.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter" && !ev.shiftKey) {
-        ev.preventDefault();
-        form.requestSubmit();
+    // Enter = newline ; send only via the interface button.
+    input.addEventListener("input", syncComposerHeight);
+    syncComposerHeight();
+  }
+
+  if (promptsEl) {
+    promptsEl.addEventListener("click", (ev) => {
+      const t = ev.target;
+      if (!(t instanceof Element)) return;
+      const card = t.closest(".prompt-card");
+      if (!card || card.classList.contains("is-busy")) return;
+      const id = card.getAttribute("data-id") || "";
+      const kind = card.getAttribute("data-kind") || "";
+      const replyBtn = t.closest("[data-reply]");
+      if (replyBtn) {
+        const reply = replyBtn.getAttribute("data-reply") || "";
+        if (kind === "permission") {
+          void replyPermission(id, reply);
+          return;
+        }
+        if (kind === "question") {
+          if (reply === "reject") {
+            void rejectQuestion(id);
+            return;
+          }
+          if (reply === "submit") {
+            const answers = collectQuestionAnswers(id);
+            if (!answers) {
+              alert("Répondez à chaque question avant de soumettre.");
+              return;
+            }
+            void replyQuestion(id, answers);
+          }
+          return;
+        }
       }
+      const optBtn = t.closest(".prompt-option");
+      if (optBtn && kind === "question") {
+        const qi = Number(optBtn.getAttribute("data-q") || "0");
+        const isCustom = optBtn.getAttribute("data-custom") === "1";
+        const value = optBtn.getAttribute("data-opt") || "";
+        const q = pendingQuestions.find((item) => item.id === id);
+        if (!q || !q.questions[qi]) return;
+        if (!questionDrafts[id]) {
+          questionDrafts[id] = q.questions.map(() => ({ selected: [], custom: "", customOn: false }));
+        }
+        const draft = questionDrafts[id][qi] || { selected: [], custom: "", customOn: false };
+        if (isCustom) {
+          draft.customOn = true;
+          if (!q.questions[qi].multiple) draft.selected = [];
+        } else if (q.questions[qi].multiple) {
+          draft.customOn = false;
+          const set = new Set(draft.selected || []);
+          if (set.has(value)) set.delete(value);
+          else set.add(value);
+          draft.selected = Array.from(set);
+        } else {
+          draft.customOn = false;
+          draft.selected = [value];
+        }
+        questionDrafts[id][qi] = draft;
+        paintPrompts();
+        if (isCustom) {
+          const inputEl = promptsEl.querySelector('.prompt-card[data-id="' + CSS.escape(id) + '"] .prompt-custom[data-q="' + qi + '"]');
+          if (inputEl) inputEl.focus();
+        }
+      }
+    });
+    promptsEl.addEventListener("input", (ev) => {
+      const t = ev.target;
+      if (!(t instanceof HTMLInputElement) || !t.classList.contains("prompt-custom")) return;
+      const card = t.closest(".prompt-card");
+      if (!card) return;
+      const id = card.getAttribute("data-id") || "";
+      const qi = Number(t.getAttribute("data-q") || "0");
+      const q = pendingQuestions.find((item) => item.id === id);
+      if (!q) return;
+      if (!questionDrafts[id]) {
+        questionDrafts[id] = q.questions.map(() => ({ selected: [], custom: "", customOn: false }));
+      }
+      if (!questionDrafts[id][qi]) questionDrafts[id][qi] = { selected: [], custom: "" };
+      questionDrafts[id][qi].custom = t.value;
     });
   }
 
@@ -1162,6 +1867,8 @@ const CHAT_JS = `
   loadSessions(querySessionId());
 })();
 `
+
+export const CHAT_PAGE_JS = CHAT_JS
 
 const BASE_CSS = `
 :root,:root[data-theme="light"]{color-scheme:light;--bg:#fafafa;--bg-elevated:#fff;--bg-muted:#f4f4f5;--bg-hover:#f4f4f5;--border:#e4e4e7;--border-strong:#d4d4d8;--text:#18181b;--text-muted:#71717a;--text-faint:#a1a1aa;--accent:#2563eb;--ok:#16a34a;--ok-bg:#dcfce7;--ok-fg:#166534;--err:#dc2626;--err-bg:#fef2f2;--err-border:#fecaca;--primary:#18181b;--primary-hover:#27272a;--primary-fg:#fff;--toggle-off:rgba(120,120,128,.22);--toggle-on:#34c759;--shadow:0 1px 2px rgba(0,0,0,.04);--font:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;--font-size:14px}
@@ -1310,13 +2017,14 @@ const CHAT_CSS = `
   flex-direction: column;
   overflow: hidden;
   background: var(--bg-elevated);
+  isolation: isolate;
 }
 .chat-toolbar {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 3;
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -1332,6 +2040,8 @@ const CHAT_CSS = `
   );
   pointer-events: none;
   min-width: 0;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 .chat-toolbar > * {
   pointer-events: auto;
@@ -1351,11 +2061,150 @@ const CHAT_CSS = `
   margin-left: auto;
   min-width: 0;
 }
-.chat-model-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.1rem;
+.model-menu {
+  position: relative;
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: min(14rem, 46vw);
+}
+.model-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.22rem 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-elevated) 88%, var(--bg-muted));
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 550;
+  cursor: pointer;
+}
+.model-menu-trigger:hover {
+  background: var(--bg-muted);
+}
+.model-menu.open .model-menu-trigger {
+  border-color: color-mix(in srgb, var(--border-strong, var(--border)) 85%, transparent);
+  background: var(--bg-muted);
+}
+.model-menu-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.model-menu-trigger svg {
+  flex-shrink: 0;
+  width: 0.85rem;
+  height: 0.85rem;
+  opacity: 0.7;
+}
+.model-menu-panel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 40;
+  width: min(20rem, calc(100vw - 1.5rem));
+  padding: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--border-strong, var(--border)) 75%, transparent);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow, 0 10px 28px rgba(0, 0, 0, 0.12));
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.model-menu-panel[hidden] {
+  display: none;
+}
+.model-menu-section-title {
+  margin: 0 0 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.model-menu-search {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 0.35rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+}
+.model-menu-list,
+.model-menu-effort {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-height: 14rem;
+  overflow: auto;
+}
+.model-menu-effort {
+  max-height: none;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.model-menu-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.84rem;
+  text-align: left;
+  cursor: pointer;
+}
+.model-menu-effort .model-menu-option {
+  width: auto;
+  flex-direction: row;
+  padding: 0.32rem 0.65rem;
+  border-color: color-mix(in srgb, var(--border) 75%, transparent);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 550;
+}
+.model-menu-option:hover {
+  background: var(--bg-muted);
+}
+.model-menu-option.is-selected {
+  background: color-mix(in srgb, var(--primary) 12%, var(--bg-elevated));
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.model-menu-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.model-menu-option-name {
+  font-weight: 550;
+}
+.model-menu-option-meta {
+  font-size: 0.7rem;
+  color: var(--text-faint);
+}
+.model-menu-empty {
+  margin: 0;
+  padding: 0.55rem 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
 }
 .context-wheel {
   flex: 0 0 auto;
@@ -1582,8 +2431,8 @@ const CHAT_CSS = `
 }
 .chat-attach-btn {
   flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
+  width: 2.1rem;
+  height: 2.1rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1591,7 +2440,7 @@ const CHAT_CSS = `
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--bg-muted) 88%, #fff 12%);
+  background: var(--bg-muted);
   color: var(--text-muted);
   cursor: pointer;
   transition: background .15s, color .15s;
@@ -1610,6 +2459,8 @@ const CHAT_CSS = `
   cursor: not-allowed;
 }
 .chat-messages {
+  position: relative;
+  z-index: 1;
   flex: 1 1 auto;
   min-height: 0;
   overflow-x: hidden;
@@ -1905,7 +2756,7 @@ const CHAT_CSS = `
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 3;
+  z-index: 20;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -1919,6 +2770,8 @@ const CHAT_CSS = `
     transparent 100%
   );
   pointer-events: none;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 .chat-bottom > * {
   pointer-events: auto;
@@ -1929,12 +2782,14 @@ const CHAT_CSS = `
   display: flex;
   align-items: flex-end;
   gap: 0.45rem;
-  margin: 0;
-  padding: 0.35rem 0.85rem 0.7rem;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  margin: 0 0.85rem 0.7rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--border-strong, var(--border)) 80%, transparent);
+  border-radius: 1.75rem;
+  background: var(--bg-elevated);
+  box-shadow:
+    var(--shadow, 0 1px 2px rgba(0, 0, 0, 0.04)),
+    0 0 0 1px color-mix(in srgb, var(--bg-elevated) 40%, transparent);
 }
 .chat-interrupted {
   display: flex;
@@ -1959,6 +2814,151 @@ const CHAT_CSS = `
 }
 .chat-interrupted span {
   flex: 0 0 auto;
+}
+.chat-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0 0.85rem 0.35rem;
+  max-height: min(42vh, 22rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.chat-prompts[hidden] {
+  display: none;
+}
+.prompt-card {
+  border: 1px solid color-mix(in srgb, var(--border-strong, var(--border)) 75%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-elevated) 92%, var(--bg-muted));
+  box-shadow: var(--shadow, 0 8px 24px rgba(0, 0, 0, 0.08));
+  padding: 0.85rem 0.95rem 0.8rem;
+}
+.prompt-card.is-busy {
+  opacity: 0.65;
+  pointer-events: none;
+}
+.prompt-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.45rem;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+.prompt-card-head strong {
+  font-weight: 650;
+}
+.prompt-card-icon {
+  display: inline-flex;
+  color: #c47b16;
+}
+.prompt-card-icon svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+.prompt-card-body {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--text);
+}
+.prompt-card-meta {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+  word-break: break-word;
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+}
+.prompt-question + .prompt-question {
+  margin-top: 0.7rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+.prompt-question-title {
+  font-size: 0.88rem;
+  font-weight: 550;
+  color: var(--text);
+}
+.prompt-question-hint {
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+.prompt-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+.prompt-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, var(--bg-muted) 55%, transparent);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.prompt-option small {
+  color: var(--text-faint);
+  font-size: 0.72rem;
+}
+.prompt-option.is-selected {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 14%, var(--bg-elevated));
+}
+.prompt-custom {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0.45rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+}
+.prompt-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+.prompt-btn {
+  margin: 0;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-strong, var(--border)) 70%, transparent);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 550;
+  cursor: pointer;
+}
+.prompt-btn:hover {
+  background: color-mix(in srgb, var(--bg-muted) 80%, transparent);
+}
+.prompt-btn-primary {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg-elevated);
+}
+.prompt-btn-primary:hover {
+  background: var(--text-muted);
+  border-color: var(--text-muted);
 }
 .chat-composer.is-sending {
   opacity: 0.72;
@@ -2000,13 +3000,14 @@ const CHAT_CSS = `
   display: block;
   width: auto;
   min-width: 0;
-  min-height: 2rem;
-  max-height: 8rem;
+  min-height: calc(16px * 1.45 + 0.7rem);
+  max-height: calc(16px * 1.45 * 45 + 0.7rem);
   margin: 0;
-  padding: 0.35rem 0.15rem;
+  padding: 0.4rem 0.25rem;
   border: none;
   outline: none;
   resize: none;
+  overflow-y: hidden;
   background: transparent;
   color: var(--text);
   font: inherit;
@@ -2051,8 +3052,8 @@ const CHAT_CSS = `
 }
 .chat-send {
   flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
+  width: 2.1rem;
+  height: 2.1rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2081,3 +3082,5 @@ const CHAT_CSS = `
   }
 }
 `
+
+export const CHAT_PAGE_CSS = CHAT_CSS

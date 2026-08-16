@@ -1,27 +1,9 @@
 import { LITE_MARKDOWN_BROWSER_JS } from "../../lib/lite-markdown.ts"
-import type { UiTheme } from "../../shell/theme.ts"
-import { themeColorScheme } from "../../shell/theme.ts"
-import { NAV_CSS, renderShell } from "../../shell/nav.ts"
 
 const ICON_EDIT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`
 
-export function renderHomePage(theme: UiTheme): string {
-  const colorScheme = themeColorScheme(theme.mode)
-  const fontOverrides = `:root{--font:${theme.sans};--mono:${theme.mono};--font-size:${theme.fontSize}px}`
-  return `<!DOCTYPE html>
-<html lang="fr" data-theme="${theme.mode}">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="color-scheme" content="${colorScheme}">
-  <title>Accueil · OpenCode</title>
-  <link rel="stylesheet" href="/code-editor.css">
-  <style>${BASE_CSS}${NAV_CSS}${HOME_CSS}${fontOverrides}</style>
-</head>
-<body>
-  ${renderShell(
-    null,
-    `
+export function renderHomeInnerHtml(): string {
+  return `
     <div class="view" id="view-home">
       <section class="panel" aria-labelledby="readme-title">
         <header class="page-chrome">
@@ -67,13 +49,7 @@ export function renderHomePage(theme: UiTheme): string {
         </form>
       </section>
     </div>
-  `,
-    "home",
-  )}
-  <script src="/code-editor.js"></script>
-  <script>${LITE_MARKDOWN_BROWSER_JS}${HOME_JS}</script>
-</body>
-</html>`
+  `
 }
 
 const HOME_JS = `
@@ -228,11 +204,15 @@ const HOME_JS = `
 })();
 `
 
-const BASE_CSS = `
+export const HOME_PAGE_JS = `${LITE_MARKDOWN_BROWSER_JS}${HOME_JS}`
+
+export const WORKSPACE_BASE_CSS = `
 :root,:root[data-theme="light"]{color-scheme:light;--bg:#fafafa;--bg-elevated:#fff;--bg-muted:#f4f4f5;--bg-hover:#f4f4f5;--border:#e4e4e7;--border-strong:#d4d4d8;--text:#18181b;--text-muted:#71717a;--text-faint:#a1a1aa;--accent:#2563eb;--ok:#16a34a;--ok-bg:#dcfce7;--ok-fg:#166534;--err:#dc2626;--err-bg:#fef2f2;--err-border:#fecaca;--primary:#18181b;--primary-hover:#27272a;--primary-fg:#fff;--toggle-off:rgba(120,120,128,.22);--toggle-on:#34c759;--shadow:0 1px 2px rgba(0,0,0,.04);--font:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;--font-size:14px}
 @media (prefers-color-scheme:dark){:root[data-theme="system"]{color-scheme:dark;--bg:#111113;--bg-elevated:#18181b;--bg-muted:#1c1c1f;--bg-hover:#27272a;--border:#27272a;--border-strong:#3f3f46;--text:#fafafa;--text-muted:#a1a1aa;--text-faint:#71717a;--accent:#60a5fa;--ok:#4ade80;--ok-bg:#14532d;--ok-fg:#bbf7d0;--err:#f87171;--err-bg:#3f1d1d;--err-border:#7f1d1d;--primary:#fafafa;--primary-hover:#e4e4e7;--primary-fg:#18181b;--toggle-off:rgba(120,120,128,.32);--shadow:none}}
 :root[data-theme="dark"]{color-scheme:dark;--bg:#111113;--bg-elevated:#18181b;--bg-muted:#1c1c1f;--bg-hover:#27272a;--border:#27272a;--border-strong:#3f3f46;--text:#fafafa;--text-muted:#a1a1aa;--text-faint:#71717a;--accent:#60a5fa;--ok:#4ade80;--ok-bg:#14532d;--ok-fg:#bbf7d0;--err:#f87171;--err-bg:#3f1d1d;--err-border:#7f1d1d;--primary:#fafafa;--primary-hover:#e4e4e7;--primary-fg:#18181b;--toggle-off:rgba(120,120,128,.32);--shadow:none}
 *{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+html.is-chat-room,html.is-chat-room body{height:100%;overflow:hidden}
 body{font-family:var(--font);font-size:var(--font-size);background:var(--bg);color:var(--text);min-height:100dvh;-webkit-font-smoothing:antialiased}
 .view.hidden,.hidden{display:none!important}
 `
@@ -243,17 +223,71 @@ const HOME_CSS = `
   height: 100dvh;
   max-height: 100dvh;
   overflow: hidden;
-  justify-content: center;
+  justify-content: stretch;
   align-items: stretch;
-  padding: var(--shell-pad);
+  padding: 0;
   box-sizing: border-box;
 }
-.shell.is-editor .shell-cluster {
+.shell.is-editor .shell-scroller {
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow-y: hidden;
+}
+.shell.is-editor .shell-drawer {
+  min-height: 100dvh;
+  height: 100dvh;
+}
+.shell.is-editor .shell-main {
+  min-height: 100dvh;
+  height: 100dvh;
+  padding: 0;
+  box-sizing: border-box;
+  align-items: stretch;
+  overflow: hidden;
+}
+.shell.is-editor .shell-top-wrap {
+  padding: var(--shell-pad) var(--shell-pad) 0.55rem;
+  background: var(--bg);
+  pointer-events: auto;
+}
+.shell.is-editor .shell-cluster,
+.shell.is-editor .shell-cluster--top {
   flex: 0 1 auto;
   align-self: stretch;
   width: min(var(--content-max), 100%);
   max-width: var(--content-max);
   min-height: 0;
+}
+.shell.is-editor.has-tools .shell-cluster--top {
+  height: auto;
+  overflow: visible;
+}
+.shell.is-editor .tools-scroller {
+  min-height: 0;
+  overflow-y: hidden;
+}
+.shell.is-editor .tool-panel {
+  padding: calc(var(--shell-pad) + var(--rail-size) + 0.95rem) var(--shell-pad) var(--shell-pad);
+  overflow: hidden;
+  align-items: stretch;
+}
+.shell.is-editor .tool-panel.is-active {
+  display: flex;
+  flex-direction: column;
+}
+.shell.is-editor .tool-panel .shell-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: min(var(--content-max), 100%);
+  max-width: var(--content-max);
+  margin-inline: auto;
+  align-self: center;
+}
+.shell.is-editor .shell-cluster {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -524,3 +558,5 @@ const HOME_CSS = `
   color: var(--text-muted);
 }
 `
+
+export const HOME_PAGE_CSS = HOME_CSS

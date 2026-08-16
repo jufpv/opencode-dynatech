@@ -23,6 +23,19 @@ const FORWARDED = new Set([
   "session.step.ended",
   "session.idle",
   "session.status",
+  "permission.asked",
+  "permission.replied",
+  "permission.v2.asked",
+  "permission.v2.replied",
+  "question.asked",
+  "question.replied",
+  "question.rejected",
+  "question.v2.asked",
+  "question.v2.replied",
+  "question.v2.rejected",
+  "form.created",
+  "form.replied",
+  "form.cancelled",
 ])
 
 function sessionIdFromEvent(parsed: unknown): string | null {
